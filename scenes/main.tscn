@@ -1,0 +1,184 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/board.gd" id="2_board"]
+[ext_resource type="Texture2D" path="res://assets/bg.png" id="3_bg"]
+[ext_resource type="FontFile" path="res://assets/fonts/ZCOOLKuaiLe-Regular.ttf" id="4_font"]
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_main")
+
+[node name="Background" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("3_bg")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ScoreLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchor_top = 0.09
+anchor_right = 1.0
+anchor_bottom = 0.165
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.18, 0.29, 0.24, 1)
+theme_override_colors/font_shadow_color = Color(1, 1, 1, 0.45)
+theme_override_constants/shadow_offset_y = 3
+theme_override_fonts/font = ExtResource("4_font")
+theme_override_font_sizes/font_size = 64
+text = "分数: 0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="InfoLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchor_top = 0.175
+anchor_right = 1.0
+anchor_bottom = 0.222
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.32, 0.4, 0.34, 1)
+theme_override_fonts/font = ExtResource("4_font")
+theme_override_font_sizes/font_size = 38
+text = "第1关 ｜ 步数: 20 ｜ 目标: 1200"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DebugLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -60.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.3, 0.36, 0.3, 0.7)
+theme_override_font_sizes/font_size = 28
+visible = false
+text = "debug: -"
+horizontal_alignment = 1
+
+[node name="Board" type="Node2D" parent="."]
+unique_name_in_owner = true
+script = ExtResource("2_board")
+
+[node name="ResultOverlay" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="ResultOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.1, 0.06, 0.55)
+
+[node name="Center" type="CenterContainer" parent="ResultOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Card" type="PanelContainer" parent="ResultOverlay/Center"]
+custom_minimum_size = Vector2(560, 560)
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="ResultOverlay/Center/Card"]
+layout_mode = 2
+theme_override_constants/separation = 28
+alignment = 1
+
+[node name="ResultLabel" type="Label" parent="ResultOverlay/Center/Card/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.18, 0.29, 0.24, 1)
+theme_override_fonts/font = ExtResource("4_font")
+theme_override_font_sizes/font_size = 76
+text = "过关啦！"
+horizontal_alignment = 1
+
+[node name="StarsBox" type="HBoxContainer" parent="ResultOverlay/Center/Card/VBox"]
+unique_name_in_owner = true
+unique_name_in_owner = true
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 24
+
+[node name="Star1" type="TextureRect" parent="ResultOverlay/Center/Card/VBox/StarsBox"]
+custom_minimum_size = Vector2(84, 84)
+layout_mode = 2
+mouse_filter = 2
+stretch_mode = 5
+expand_mode = 1
+
+[node name="Star2" type="TextureRect" parent="ResultOverlay/Center/Card/VBox/StarsBox"]
+custom_minimum_size = Vector2(84, 84)
+layout_mode = 2
+mouse_filter = 2
+stretch_mode = 5
+expand_mode = 1
+
+[node name="Star3" type="TextureRect" parent="ResultOverlay/Center/Card/VBox/StarsBox"]
+custom_minimum_size = Vector2(84, 84)
+layout_mode = 2
+mouse_filter = 2
+stretch_mode = 5
+expand_mode = 1
+
+[node name="DetailLabel" type="Label" parent="ResultOverlay/Center/Card/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.32, 0.4, 0.34, 1)
+theme_override_fonts/font = ExtResource("4_font")
+theme_override_font_sizes/font_size = 40
+text = "得分 0 ／ 目标 1200 ｜ 最高 0"
+horizontal_alignment = 1
+
+[node name="ButtonsBox" type="HBoxContainer" parent="ResultOverlay/Center/Card/VBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 32
+
+[node name="RestartButton" type="Button" parent="ResultOverlay/Center/Card/VBox/ButtonsBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 100)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_font")
+theme_override_font_sizes/font_size = 44
+text = "再来一局"
+
+[node name="LevelsButton" type="Button" parent="ResultOverlay/Center/Card/VBox/ButtonsBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 100)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_font")
+theme_override_font_sizes/font_size = 44
+text = "选关"

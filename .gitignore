@@ -1,0 +1,19 @@
+# Godot 引擎缓存
+.godot/
+
+# 构建产物
+build/
+*.apk
+*.idsig
+
+# 本地签名与私密文件（绝对不要入库！）
+*.keystore
+*.keystore.bak
+export_presets.cfg.bak
+
+# 本地归档（宣传片原件等）
+promo/
+
+# 系统杂项
+.DS_Store
+__pycache__
