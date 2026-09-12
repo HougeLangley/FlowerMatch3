@@ -14,7 +14,8 @@ config/name="鲜花消消乐"
 run/main_scene="res://scenes/intro.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://icon.png"
-config/version="1.1.0"
+config/quit_on_go_back=false
+config/version="1.1.1"
 
 [display]
 

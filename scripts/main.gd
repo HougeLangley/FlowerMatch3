@@ -128,6 +128,13 @@ func _on_levels_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/level_select.tscn")
 
 
+## 系统返回（侧滑手势/返回键）→ 回选关，而不是退出应用
+## （配合 project.godot 的 application/config/quit_on_go_back=false）
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		_on_levels_pressed()
+
+
 func _update_ui() -> void:
 	_score_label.text = "分数: %d" % _score
 	_info_label.text = "第%d关 ｜ 步数: %d ｜ 目标: %d" % [_level, _moves_left, _target]

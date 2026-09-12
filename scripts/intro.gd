@@ -27,3 +27,9 @@ func _enter_game() -> void:
 	_entered = true
 	_video.stop()
 	get_tree().change_scene_to_file(GAME_SCENE)
+
+
+## 系统返回（侧滑手势/返回键）→ 跳过开场直接进选关
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		_enter_game()

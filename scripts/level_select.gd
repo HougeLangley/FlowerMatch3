@@ -65,3 +65,9 @@ func _make_level_cell(level: int) -> Control:
 func _on_level_pressed(level: int) -> void:
 	GameState.current_level = level
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
+
+
+## 系统返回（侧滑手势/返回键）→ 首页退出应用（Android 惯例）
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		get_tree().quit()
