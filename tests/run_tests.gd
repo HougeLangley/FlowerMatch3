@@ -4,6 +4,7 @@ extends SceneTree
 ## 退出码 = 失败用例数
 
 const ML := preload("res://scripts/match_logic.gd")
+const GS := preload("res://scripts/game_state.gd")
 
 var _failures := 0
 
@@ -20,6 +21,10 @@ func _init() -> void:
 	_test_magic_excluded()
 	_test_intersections()
 	_test_area_cells()
+	_test_drag_direction()
+	_test_star_system()
+	_test_make_grid_blocked()
+	_test_level_configs()
 	if _failures == 0:
 		print("== ALL TESTS PASSED ==")
 	else:
@@ -176,3 +181,65 @@ func _test_area_cells() -> void:
 	var edge := ML.area_cells(Vector2i(0, 0), 7, 11)
 	_check(edge.size() == 4, "area_cells: clipped at board corner")
 	_check(not edge.has(Vector2i(-1, 0)), "area_cells: no negative coords")
+
+
+func _test_drag_direction() -> void:
+	_check(ML.drag_direction(Vector2(50, 5)) == Vector2i.RIGHT, "drag: right")
+	_check(ML.drag_direction(Vector2(-50, 8)) == Vector2i.LEFT, "drag: left")
+	_check(ML.drag_direction(Vector2(6, 60)) == Vector2i.DOWN, "drag: down")
+	_check(ML.drag_direction(Vector2(-3, -60)) == Vector2i.UP, "drag: up")
+	_check(ML.drag_direction(Vector2(30, -28)) == Vector2i.RIGHT, "drag: x-dominant tie")
+	_check(ML.drag_direction(Vector2.ZERO) == Vector2i.ZERO, "drag: zero delta")
+
+
+func _test_star_system() -> void:
+	# 门槛：1★=目标 2★=1.35x 3★=1.75x
+	var t := GS.star_thresholds(1000)
+	var expect: Array[int] = [1000, 1350, 1750]
+	_check(t == expect, "stars: thresholds 1x/1.35x/1.75x")
+	_check(GS.star_rating(1000, 999) == 0, "stars: below target = 0")
+	_check(GS.star_rating(1000, 1000) == 1, "stars: target = 1")
+	_check(GS.star_rating(1000, 1349) == 1, "stars: just below 2nd = 1")
+	_check(GS.star_rating(1000, 1350) == 2, "stars: 1.35x = 2")
+	_check(GS.star_rating(1000, 1749) == 2, "stars: just below 3rd = 2")
+	_check(GS.star_rating(1000, 1750) == 3, "stars: 1.75x = 3")
+	_check(GS.star_rating(1200, 2400) == 3, "stars: level1 2400 = 3")
+	var t2 := GS.star_thresholds(2000)
+	_check(t2[0] < t2[1] and t2[1] < t2[2], "stars: thresholds monotonic")
+
+
+func _test_make_grid_blocked() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var blocked := {Vector2i(0, 0): -1, Vector2i(3, 5): 1}
+	var g := ML.make_grid(7, 11, 6, rng, blocked)
+	_check(g[0] == -1 and g[5 * 7 + 3] == -1, "blocked: cells set to -1")
+	var valid := true
+	for i in range(g.size()):
+		var cell := Vector2i(i % 7, i / 7)
+		if not blocked.has(cell) and (g[i] < 0 or g[i] >= 6):
+			valid = false
+	_check(valid, "blocked: playable cells valid types")
+	_check(ML.find_matches(g, 7, 11).is_empty(), "blocked: no initial matches")
+
+
+func _test_level_configs() -> void:
+	var ok := true
+	for lv in GS.LEVELS:
+		if int(lv["flowers"]) < 4 or int(lv["flowers"]) > 6:
+			ok = false
+		var seen: Dictionary = {}
+		for v in lv["vines"]:
+			var c := Vector2i(v[0], v[1])
+			if c.x < 0 or c.x >= 7 or c.y < 0 or c.y >= 11 or seen.has(c):
+				ok = false
+			seen[c] = true
+		for s in lv["snow"]:
+			var c := Vector2i(s[0], s[1])
+			if c.x < 0 or c.x >= 7 or c.y < 0 or c.y >= 11 or seen.has(c):
+				ok = false
+			seen[c] = true
+	_check(ok, "configs: flowers/vines/snow valid & no overlap")
+	_check(int(GS.LEVELS[1]["vines"].size()) > 0, "configs: L2 has vines")
+	_check(int(GS.LEVELS[2]["snow"].size()) > 0, "configs: L3 has snow")
+	_check(int(GS.LEVELS[4]["flowers"]) == 5, "configs: L5 is 5-color (爽快)")

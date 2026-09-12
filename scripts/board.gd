@@ -15,6 +15,7 @@ const POINTS_PER_TILE := 10
 const MAGIC_POINTS_PER_TILE := 15
 const SIDE_MARGIN := 10.0
 const TOP_RATIO := 0.225  # 棋盘上缘占视口高度比例（避开前摄开孔与信息栏）
+const DRAG_TRIGGER_RATIO := 0.3  # 拖拽超过 0.3 格宽即触发交换（轻划手感）
 
 const FLOWER_COLORS: Array[Color] = [
 	Color(0.85, 0.22, 0.22),   # 玫瑰
@@ -26,6 +27,8 @@ const FLOWER_COLORS: Array[Color] = [
 ]
 const PETAL_TEXTURE := preload("res://assets/petal.png")
 const UI_FONT := preload("res://assets/fonts/ZCOOLKuaiLe-Regular.ttf")
+const VINE_TEXTURE := preload("res://assets/vine.png")
+const SNOW_TEXTURE := preload("res://assets/snow.png")
 
 var _rng := RandomNumberGenerator.new()
 var _tiles: Array = []  # _tiles[x][y] -> Tile 或 null
@@ -35,11 +38,16 @@ var _score := 0
 var _tile_size := 100.0
 var _origin := Vector2.ZERO
 
-var _pop_player: AudioStreamPlayer
-var _swap_player: AudioStreamPlayer
-var _magic_player: AudioStreamPlayer
-var _line_player: AudioStreamPlayer
-var _boom_player: AudioStreamPlayer
+# 本关配置（来自 GameState.LEVELS）
+var _flower_types := 6            # 花色数（5 色更爽快）
+var _blocks: Dictionary = {}      # Vector2i -> HP（-1=永久藤蔓，>=1=可破雪块）
+var _block_sprites: Dictionary = {}  # Vector2i -> Sprite2D
+
+# 指针状态（点击选牌 + 按住滑动交换）
+var _pointer_down := false
+var _drag_start_pos := Vector2.ZERO
+var _drag_start_cell := Vector2i(-1, -1)
+var _drag_consumed := false
 
 
 func _ready() -> void:
@@ -47,12 +55,8 @@ func _ready() -> void:
 	var view := get_viewport_rect().size
 	_tile_size = (view.x - SIDE_MARGIN * 2.0) / float(GRID_W)
 	_origin = Vector2(SIDE_MARGIN, view.y * TOP_RATIO)
-	_add_backdrop(view)
-	_pop_player = _make_player(preload("res://assets/sounds/pop.wav"))
-	_swap_player = _make_player(preload("res://assets/sounds/swap.wav"))
-	_magic_player = _make_player(preload("res://assets/sounds/magic.wav"))
-	_line_player = _make_player(preload("res://assets/sounds/line.wav"))
-	_boom_player = _make_player(preload("res://assets/sounds/boom.wav"))
+	_add_backdrop(view)      # 先加卡片（树序最底）
+	_load_level_config()      # 再加障碍精灵（盖在卡片上）
 	_build_grid()
 
 
@@ -69,28 +73,92 @@ func is_valid_cell(cell: Vector2i) -> bool:
 	return cell.x >= 0 and cell.x < GRID_W and cell.y >= 0 and cell.y < GRID_H
 
 
-func _make_player(stream: AudioStream) -> AudioStreamPlayer:
-	var player := AudioStreamPlayer.new()
-	player.stream = stream
-	add_child(player)
-	return player
-
-
 func _add_backdrop(view: Vector2) -> void:
 	var panel := Sprite2D.new()
 	panel.texture = preload("res://assets/panel.png")
 	panel.position = Vector2(view.x * 0.5, _origin.y + _tile_size * GRID_H * 0.5)
+	# 不用 z_index（画布全局，易误伤）；靠树序：卡片→障碍→棋子
 	add_child(panel)
 
 
+## 读取本关配置：花色数 + 障碍（藤蔓永久 / 雪块可破）
+func _load_level_config() -> void:
+	var cfg: Dictionary = GameState.LEVELS[GameState.current_level - 1]
+	_flower_types = int(cfg.get("flowers", 6))
+	for v in cfg.get("vines", []):
+		_blocks[Vector2i(v[0], v[1])] = -1
+	for s in cfg.get("snow", []):
+		var c := Vector2i(s[0], s[1])
+		if not _blocks.has(c):
+			_blocks[c] = 1
+	_add_block_sprites()
+
+
+func _add_block_sprites() -> void:
+	for cell in _blocks.keys():
+		var sprite := Sprite2D.new()
+		sprite.texture = VINE_TEXTURE if int(_blocks[cell]) < 0 else SNOW_TEXTURE
+		var tex_w := float(sprite.texture.get_width())
+		sprite.scale = Vector2.ONE * (_tile_size * 0.96 / tex_w)
+		sprite.position = cell_to_world(cell)
+		add_child(sprite)
+		_block_sprites[cell] = sprite
+
+
+## 相邻消除破坏障碍：雪块 1 点即碎，藤蔓永久不破
+func _damage_adjacent_blocks(clear: Dictionary) -> void:
+	var hit: Dictionary = {}
+	for c in clear.keys():
+		for d in [Vector2i.RIGHT, Vector2i.LEFT, Vector2i.UP, Vector2i.DOWN]:
+			var n: Vector2i = c + d
+			if _blocks.has(n):
+				hit[n] = true
+	for n in hit.keys():
+		var hp: int = int(_blocks[n])
+		if hp < 0:
+			continue
+		hp -= 1
+		if hp <= 0:
+			_blocks.erase(n)
+			_break_block_sprite(n)
+			Sfx.play_break(cell_to_world(n))
+		else:
+			_blocks[n] = hp
+			_flash_block_sprite(n)
+
+
+func _break_block_sprite(cell: Vector2i) -> void:
+	var sprite: Sprite2D = _block_sprites.get(cell)
+	if sprite == null:
+		return
+	_block_sprites.erase(cell)
+	var tween := sprite.create_tween()
+	tween.tween_property(sprite, "scale", Vector2.ZERO, 0.18)
+	tween.parallel().tween_property(sprite, "modulate:a", 0.0, 0.18)
+	tween.tween_callback(sprite.queue_free)
+
+
+func _flash_block_sprite(cell: Vector2i) -> void:
+	var sprite: Sprite2D = _block_sprites.get(cell)
+	if sprite == null:
+		return
+	var base: Vector2 = sprite.scale
+	var tween := sprite.create_tween()
+	tween.tween_property(sprite, "scale", base * 1.18, 0.08)
+	tween.tween_property(sprite, "scale", base, 0.1)
+
+
 func _build_grid() -> void:
-	var types := MatchLogic.make_grid(GRID_W, GRID_H, FLOWER_TYPES, _rng)
+	var types := MatchLogic.make_grid(GRID_W, GRID_H, _flower_types, _rng, _blocks)
 	while not MatchLogic.has_possible_move(types, GRID_W, GRID_H):
-		types = MatchLogic.make_grid(GRID_W, GRID_H, FLOWER_TYPES, _rng)
+		types = MatchLogic.make_grid(GRID_W, GRID_H, _flower_types, _rng, _blocks)
 	for x in range(GRID_W):
 		var column: Array = []
 		for y in range(GRID_H):
-			column.append(_spawn_tile(Vector2i(x, y), types[y * GRID_W + x], 0))
+			if _blocks.has(Vector2i(x, y)):
+				column.append(null)  # 障碍格无棋子
+			else:
+				column.append(_spawn_tile(Vector2i(x, y), types[y * GRID_W + x], 0))
 		_tiles.append(column)
 
 
@@ -100,6 +168,7 @@ func _spawn_tile(p_cell: Vector2i, p_type: int, rows_above: int) -> Tile:
 	tile.cell = p_cell
 	tile.position = cell_to_world(p_cell) - Vector2(0.0, _tile_size * rows_above)
 	add_child(tile)
+	tile.start_idle()  # 开启闲置动效（每种花不同律动）
 	return tile
 
 
@@ -122,22 +191,63 @@ func _snapshot() -> Array[int]:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	var pos := Vector2.ZERO
-	var tapped := false
-	if event is InputEventScreenTouch and event.pressed:
-		tapped = true
-		pos = event.position
-	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		tapped = true
-		pos = event.position
-	if not tapped:
+	if event is InputEventScreenTouch:
+		if event.index != 0:
+			return
+		if event.pressed:
+			_begin_pointer(event.position)
+		else:
+			_end_pointer()
+	elif event is InputEventScreenDrag:
+		if event.index == 0:
+			_update_drag(event.position)
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			_begin_pointer(event.position)
+		else:
+			_end_pointer()
+	elif event is InputEventMouseMotion and _pointer_down:
+		_update_drag(event.position)
+
+
+func _begin_pointer(pos: Vector2) -> void:
+	_pointer_down = true
+	_drag_consumed = false
+	_drag_start_pos = pos
+	_drag_start_cell = world_to_cell(pos)
+	input_received.emit(pos, _drag_start_cell)
+	if not is_valid_cell(_drag_start_cell):
 		return
-	var cell := world_to_cell(pos)
-	input_received.emit(pos, cell)
-	if not is_valid_cell(cell):
+	_on_tile_pressed(_tiles[_drag_start_cell.x][_drag_start_cell.y])
+	debug_state.emit("press:%s sel:%s" % [_drag_start_cell,
+		_selected.cell if _selected else "-"])
+
+
+## 按住滑动：拖过触发距离后按主方向与相邻格交换（轻划手感）
+func _update_drag(pos: Vector2) -> void:
+	if not _pointer_down or _drag_consumed or _busy:
 		return
-	_on_tile_pressed(_tiles[cell.x][cell.y])
-	debug_state.emit("cell:%s sel:%s" % [cell, _selected.cell if _selected else "-"])
+	if not is_valid_cell(_drag_start_cell):
+		return
+	if pos.distance_to(_drag_start_pos) < _tile_size * DRAG_TRIGGER_RATIO:
+		return
+	_drag_consumed = true
+	var dir := MatchLogic.drag_direction(pos - _drag_start_pos)
+	if dir == Vector2i.ZERO:
+		return
+	var target := _drag_start_cell + dir
+	if not is_valid_cell(target):
+		return
+	var from_tile: Tile = _tiles[_drag_start_cell.x][_drag_start_cell.y]
+	var to_tile: Tile = _tiles[target.x][target.y]
+	if from_tile != null and to_tile != null:
+		_try_swap(from_tile, to_tile)
+
+
+func _end_pointer() -> void:
+	_pointer_down = false
+	_drag_consumed = false
+	_drag_start_cell = Vector2i(-1, -1)
 
 
 func _on_tile_pressed(tile: Tile) -> void:
@@ -146,6 +256,7 @@ func _on_tile_pressed(tile: Tile) -> void:
 	if _selected == null:
 		_selected = tile
 		tile.set_selected(true)
+		Sfx.play_select(cell_to_world(tile.cell))
 	elif _selected == tile:
 		tile.set_selected(false)
 		_selected = null
@@ -155,6 +266,7 @@ func _on_tile_pressed(tile: Tile) -> void:
 		_selected.set_selected(false)
 		_selected = tile
 		tile.set_selected(true)
+		Sfx.play_select(cell_to_world(tile.cell))
 
 
 func _try_swap(a: Tile, b: Tile) -> void:
@@ -167,20 +279,24 @@ func _try_swap(a: Tile, b: Tile) -> void:
 		await _resolve_matches([a.cell, b.cell])
 		move_made.emit()
 	elif MatchLogic.find_matches(_snapshot(), GRID_W, GRID_H).is_empty():
-		await _swap_visual(a, b)  # 无效交换，换回（不消耗步数）
+		await _swap_visual(a, b, true)  # 无效交换，换回（不消耗步数）
+		Sfx.play_invalid((cell_to_world(a.cell) + cell_to_world(b.cell)) * 0.5)
 	else:
 		await _resolve_matches([a.cell, b.cell])
 		move_made.emit()
 	_busy = false
 
 
-func _swap_visual(a: Tile, b: Tile) -> void:
+func _swap_visual(a: Tile, b: Tile, silent := false) -> void:
+	var vertical := a.cell.x == b.cell.x  # 同列 = 纵向交换（音色略有区分）
+	var mid := (cell_to_world(a.cell) + cell_to_world(b.cell)) * 0.5
 	_tiles[a.cell.x][a.cell.y] = b
 	_tiles[b.cell.x][b.cell.y] = a
 	var tmp := a.cell
 	a.cell = b.cell
 	b.cell = tmp
-	_swap_player.play()
+	if not silent:
+		Sfx.play_swap(mid, vertical)
 	var tween_a := a.move_to(cell_to_world(a.cell))
 	b.move_to(cell_to_world(b.cell))
 	await tween_a.finished
@@ -205,7 +321,7 @@ func _resolve_magic(a: Tile, b: Tile) -> void:
 				clear[Vector2i(x, y)] = true
 	_score += clear.size() * MAGIC_POINTS_PER_TILE
 	score_changed.emit(_score)
-	_magic_player.play()
+	Sfx.play_magic((cell_to_world(a.cell) + cell_to_world(b.cell)) * 0.5)
 	_clear_cells(clear)
 	await get_tree().create_timer(0.25).timeout
 	await _apply_gravity()
@@ -249,6 +365,7 @@ func _resolve_matches(preferred: Array[Vector2i] = []) -> void:
 					"special": sp,
 				})
 		_expand_special_chains(clear)
+		_damage_adjacent_blocks(clear)  # 相邻消除破坏雪块（开图节奏）
 		for cr in creations:
 			clear.erase(cr["cell"])
 		if clear.is_empty():
@@ -256,11 +373,10 @@ func _resolve_matches(preferred: Array[Vector2i] = []) -> void:
 		var gained := clear.size() * POINTS_PER_TILE * combo
 		_score += gained
 		score_changed.emit(_score)
-		_pop_player.pitch_scale = 1.0 + (combo - 1) * 0.12
-		_pop_player.play()
+		var center := _cells_center(clear.keys())
+		Sfx.play_pop(combo, center)
 		_clear_cells(clear)
 		# 连击浮字
-		var center := _cells_center(clear.keys())
 		if combo > 1:
 			_spawn_float_text(center + Vector2(0, -70), "连锁×%d" % combo,
 				Color(0.98, 0.72, 0.15), 56)
@@ -270,6 +386,7 @@ func _resolve_matches(preferred: Array[Vector2i] = []) -> void:
 			if tile != null:
 				tile.set_special(cr["special"])
 				tile.pulse()
+				Sfx.play_special(cell_to_world(cr["cell"]))
 		await get_tree().create_timer(0.22).timeout
 		await _apply_gravity()
 	if not _has_magic() and not MatchLogic.has_possible_move(_snapshot(), GRID_W, GRID_H):
@@ -297,14 +414,14 @@ func _expand_special_chains(clear: Dictionary) -> void:
 			Tile.Special.LINE_H:
 				for x in range(GRID_W):
 					extra.append(Vector2i(x, c.y))
-				_line_player.play()
+				Sfx.play_line(cell_to_world(c), false)
 			Tile.Special.LINE_V:
 				for y in range(GRID_H):
 					extra.append(Vector2i(c.x, y))
-				_line_player.play()
+				Sfx.play_line(cell_to_world(c), true)
 			Tile.Special.BOMB:
 				extra.append_array(MatchLogic.area_cells(c, GRID_W, GRID_H, 1))
-				_boom_player.play()
+				Sfx.play_boom(cell_to_world(c))
 			Tile.Special.MAGIC:
 				extra.append_array(_cells_of_type(_most_common_type()))
 		for e in extra:
@@ -427,6 +544,9 @@ func _apply_gravity() -> void:
 	for x in range(GRID_W):
 		var write := GRID_H - 1
 		for y in range(GRID_H - 1, -1, -1):
+			if _blocks.has(Vector2i(x, y)):
+				write = y - 1  # 障碍是墙：上方元素止步于障碍上缘
+				continue
 			var tile: Tile = _tiles[x][y]
 			if tile == null:
 				continue
@@ -438,7 +558,9 @@ func _apply_gravity() -> void:
 			write -= 1
 		var empty_count := write + 1
 		for y in range(write, -1, -1):
-			var type := _rng.randi_range(0, FLOWER_TYPES - 1)
+			if _blocks.has(Vector2i(x, y)):
+				continue  # 双保险（理论上不可达：write 只会停在障碍下方）
+			var type := _rng.randi_range(0, _flower_types - 1)
 			var tile := _spawn_tile(Vector2i(x, y), type, empty_count)
 			_tiles[x][y] = tile  # 关键：新棋子必须注册进网格，否则不可交互/不参与匹配
 			last_tween = tile.move_to(cell_to_world(tile.cell))
@@ -448,9 +570,9 @@ func _apply_gravity() -> void:
 
 ## 无可行步时原地重排（保证无初始消除且有解），特殊花重置
 func _reshuffle() -> void:
-	var types := MatchLogic.make_grid(GRID_W, GRID_H, FLOWER_TYPES, _rng)
+	var types := MatchLogic.make_grid(GRID_W, GRID_H, _flower_types, _rng, _blocks)
 	while not MatchLogic.has_possible_move(types, GRID_W, GRID_H):
-		types = MatchLogic.make_grid(GRID_W, GRID_H, FLOWER_TYPES, _rng)
+		types = MatchLogic.make_grid(GRID_W, GRID_H, _flower_types, _rng, _blocks)
 	for x in range(GRID_W):
 		for y in range(GRID_H):
 			var tile: Tile = _tiles[x][y]

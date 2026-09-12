@@ -1,7 +1,7 @@
 # 鲜花消消乐 · Flower Match 3
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.0.0-blue.svg)](../../releases)
+[![Version](https://img.shields.io/badge/Version-1.1.0-blue.svg)](../../releases)
 [![Engine](https://img.shields.io/badge/Godot-4.7-478cbf.svg)](https://godotengine.org)
 
 > 一款用 Godot 4 开发的鲜花主题休闲三消手游（Android）。
@@ -17,22 +17,36 @@
 
 ## 📱 游戏截图
 
-| 开场视频 | 游戏画面 | 选关界面 |
+| 花朵闲置动效 | 游戏画面 | 选关界面 |
 |---|---|---|
-| ![开场](docs/screenshot_intro.png) | ![游戏](docs/screenshot_gameplay.png) | ![选关](docs/screenshot_level_select.png) |
+| ![动效](docs/screenshots/anim_idle.gif) | ![游戏](docs/screenshots/shot_board.png) | ![选关](docs/screenshots/shot_levels.png) |
+
+| 藤蔓关（樱花主题） |
+|---|
+| ![藤蔓](docs/screenshots/shot_vines.png) |
 
 ## 🌸 玩法介绍
 
 - **多关卡**：5 个关卡难度递进（目标分 1200 → 6500，步数 20 → 28），过关解锁下一关
-- **三星评价**：达到目标分 1★，1.6 倍 2★，2.4 倍 3★，星级与最高分自动存档
-- **基本规则**：7×11 棋盘、6 种花朵，点击选中 → 点击相邻花朵交换，三连即消除；无效交换自动换回（不扣步数）
+- **关卡差异化**：每关都有新鲜感——
+  - L1 花园初遇：全开放棋盘（引导关）
+  - L2 藤蔓缠绕：**藤蔓障碍**永久占格，布局变化
+  - L3 破雪开路：**雪块障碍**相邻消除即破，地图逐步打开（“开图”节奏）
+  - L4 心之花园：藤蔓切出心形棋盘 + 中央雪块
+  - L5 终极挑战：**5 色棋盘**（少色更易连消，爽快感拉满）+ 双障碍
+- **动态背景**：MiniMax H3 生成的竖屏循环视频（晴日花园 / 樱花飘落双主题按关交替），运动柔和、不抢棋盘
+- **三星评价**：**玩满步数后按最终得分评星**——达标 1★、1.35× 2★、1.75× 3★；提前打到三星线可完美提前收官；右上角星星随分数实时点亮
+- **基本规则**：7×11 棋盘、5~6 种花朵（关卡不同），**点击选中→点击相邻花朵交换**，或**按住花朵轻划到相邻花朵**直接交换；无效交换自动换回（不扣步数）
 - **连锁加倍**：消除后花朵坠落补充，连锁消除得分翻倍
 - **特殊花朵**：
   - 四连 → **行列消除花**：被消除时引爆整行或整列
   - L / T 形 → **范围爆炸花**：被消除时引爆 3×3 区域
   - 五连 → **魔力花**：与任意花交换可清除全屏同色花朵
   - 特殊花朵之间可以连环引爆
-- **体验细节**：消除时花瓣粒子飞散、得分浮字、连锁升调音效；开局播放可跳过的宣传短片
+- **体验细节**：消除时花瓣粒子飞散、得分浮字；开局播放可跳过的宣传短片
+- **灵动音效**：14 种代码合成音效（消除三音色变体、五声音阶连锁升调、行列/爆炸/魔力花/雪块破碎/点选），多声部池叠加不打断 + 按格子位置左右声场；无效交换有柔提醒，过关音阶 + 实时星级“叮”声 + 星星逐颗点亮
+- **鲜活花朵**：每种花有自己的闲置律动（玫瑰摇曳/向日葵呼吸/樱花飘浮/郁金香摆头/薰衣草轻飘/百合静谧/魔力花旋转/爆炸花心跳），按棋盘对角线错相位形成花园波浪
+- **一键静音**：游戏界面左上角花盘静音按钮（与右上角星级进度对称），点击全局静音（含所有音效）；静音设置持久化保存在本地
 - **无解保护**：没有可行步时自动重排棋盘
 
 ## 🛠️ 本地构建
@@ -103,10 +117,10 @@ python3 tools/gen_sounds.py    # 全部音效（合成音，无版权问题）
 
 ```
 scenes/            场景：开场视频 / 选关 / 主游戏
-scripts/           GDScript：棋盘逻辑、棋子、关卡状态、纯逻辑层
-assets/            图片、字体、音效、视频资源
-tools/             素材生成与打包脚本
-tests/             单元测试与场景冒烟测试
+scripts/           GDScript：棋盘逻辑（含障碍系统）、棋子、关卡状态、纯逻辑层
+assets/            花朵/障碍物素材、字体、音效、循环背景视频（均程序或 AI 生成）
+tools/             素材生成（花朵/音效/背景视频）与打包脚本
+tests/             单元测试与场景冒烟（结算/爆炸花/关卡障碍）
 docs/              README 用图与宣传视频
 ```
 
@@ -120,7 +134,7 @@ docs/              README 用图与宣传视频
 ## 💐 特别感谢
 
 - [Godot Engine](https://godotengine.org) — 优秀的开源游戏引擎
-- [MiniMax](https://platform.minimaxi.com) — 应用图标与开场宣传视频由 MiniMax 图像/H3 视频模型生成
+- [MiniMax](https://platform.minimaxi.com) — 应用图标、开场宣传片与循环背景视频均由 MiniMax 图像 / H3 视频模型生成
 - [DeepSeek](https://www.deepseek.com) — 视觉模型辅助界面布局测量
 - [站酷快乐体 ZCOOL KuaiLe](https://github.com/google/fonts/tree/main/ofl/zcoolkuaile) — 中文 UI 字体（OFL 开源协议）
 
@@ -144,9 +158,11 @@ A flower-themed match-3 puzzle game for Android, built with **Godot 4.7** and GD
 
 ## Features
 
-- 5 levels with increasing difficulty (target score & move limit), star ratings (1~3★) and persistent best scores
-- 7×11 board, 6 flower types; tap-to-select and swap adjacent tiles
+- 5 levels with increasing difficulty, **star system based on final score after all moves** (1★ = target, 2★ = 1.35×, 3★ = 1.75×; early 3★ finish), live star progress display
+- 7×11 board, 6 flower types; **tap-select swap or press-and-swipe** adjacent tiles
 - Cascades with combo score multiplier, floating score text, petal particle effects, synthesized SFX
+- 5 distinctive levels (guide / vines / breakable snow / heart-shaped board / 5-color finale), see the Chinese section for details
+- Animated looping video backgrounds (two alternating themes, H3-generated seamless palindrome loops)
 - Special tiles: 4-match → line blaster, L/T-shape → 3×3 bomb, 5-match → rainbow magic flower; chain reactions supported
 - AI-generated app icon & skippable intro promo video (MiniMax image / H3 video models)
 - Fully procedural art & audio assets (PIL + numpy), zero external copyright dependencies

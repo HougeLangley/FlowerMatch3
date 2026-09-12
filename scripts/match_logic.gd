@@ -8,12 +8,18 @@ const DIR_H := 0  # 横向连
 const DIR_V := 1  # 纵向连
 
 
-## 生成无初始消除的网格
-static func make_grid(w: int, h: int, type_count: int, rng: RandomNumberGenerator) -> Array[int]:
+## 生成无初始消除的网格；blocked 中的格子置为 -1（障碍/真空位）
+static func make_grid(w: int, h: int, type_count: int, rng: RandomNumberGenerator,
+		blocked: Dictionary = {}) -> Array[int]:
 	var g: Array[int] = []
 	g.resize(w * h)
+	for i in range(w * h):
+		if blocked.has(Vector2i(i % w, i / w)):
+			g[i] = -1
 	for y in range(h):
 		for x in range(w):
+			if g[y * w + x] == -1:
+				continue
 			var banned: Dictionary = {}
 			if x >= 2 and g[y * w + x - 1] == g[y * w + x - 2]:
 				banned[g[y * w + x - 1]] = true
@@ -79,6 +85,15 @@ static func find_matches(g: Array[int], w: int, h: int) -> Dictionary:
 
 static func is_adjacent(a: Vector2i, b: Vector2i) -> bool:
 	return abs(a.x - b.x) + abs(a.y - b.y) == 1
+
+
+## 拖拽位移 → 主方向单位向量（取绝对值大的轴），零位移返回 ZERO
+static func drag_direction(delta: Vector2) -> Vector2i:
+	if absf(delta.x) < 0.0001 and absf(delta.y) < 0.0001:
+		return Vector2i.ZERO
+	if absf(delta.x) >= absf(delta.y):
+		return Vector2i.RIGHT if delta.x > 0.0 else Vector2i.LEFT
+	return Vector2i.DOWN if delta.y > 0.0 else Vector2i.UP
 
 
 ## 检测 L/T 形：横竖连组共享格子 → 交叉点生成范围爆炸花

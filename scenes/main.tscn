@@ -1,9 +1,66 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/board.gd" id="2_board"]
 [ext_resource type="Texture2D" path="res://assets/bg.png" id="3_bg"]
 [ext_resource type="FontFile" path="res://assets/fonts/ZCOOLKuaiLe-Regular.ttf" id="4_font"]
+[ext_resource type="Texture2D" path="res://assets/sound_on.png" id="5_sound_on"]
+[ext_resource type="Texture2D" path="res://assets/sound_off.png" id="6_sound_off"]
+
+[sub_resource type="StyleBoxFlat" id="card_bg"]
+content_margin_left = 22.0
+content_margin_top = 26.0
+content_margin_right = 22.0
+content_margin_bottom = 26.0
+bg_color = Color(1, 0.988, 0.957, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.87, 0.92, 0.85, 1)
+corner_radius_top_left = 36
+corner_radius_top_right = 36
+corner_radius_bottom_right = 36
+corner_radius_bottom_left = 36
+shadow_color = Color(0.08, 0.18, 0.1, 0.35)
+shadow_size = 16
+shadow_offset = Vector2(0, 6)
+
+[sub_resource type="StyleBoxFlat" id="btn_normal"]
+content_margin_left = 30.0
+content_margin_top = 14.0
+content_margin_right = 30.0
+content_margin_bottom = 14.0
+bg_color = Color(0.35, 0.61, 0.44, 1)
+corner_radius_top_left = 26
+corner_radius_top_right = 26
+corner_radius_bottom_right = 26
+corner_radius_bottom_left = 26
+shadow_color = Color(0.1, 0.25, 0.15, 0.25)
+shadow_size = 6
+shadow_offset = Vector2(0, 4)
+
+[sub_resource type="StyleBoxFlat" id="btn_hover"]
+content_margin_left = 30.0
+content_margin_top = 14.0
+content_margin_right = 30.0
+content_margin_bottom = 14.0
+bg_color = Color(0.42, 0.68, 0.5, 1)
+corner_radius_top_left = 26
+corner_radius_top_right = 26
+corner_radius_bottom_right = 26
+corner_radius_bottom_left = 26
+
+[sub_resource type="StyleBoxFlat" id="btn_pressed"]
+content_margin_left = 30.0
+content_margin_top = 14.0
+content_margin_right = 30.0
+content_margin_bottom = 14.0
+bg_color = Color(0.26, 0.48, 0.34, 1)
+corner_radius_top_left = 26
+corner_radius_top_right = 26
+corner_radius_bottom_right = 26
+corner_radius_bottom_left = 26
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -26,6 +83,29 @@ mouse_filter = 2
 texture = ExtResource("3_bg")
 expand_mode = 1
 stretch_mode = 6
+
+[node name="BgVideo" type="VideoStreamPlayer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+expand = true
+loop = true
+autoplay = true
+
+[node name="BgTint" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 0.99, 0.96, 0.42)
 
 [node name="ScoreLabel" type="Label" parent="."]
 unique_name_in_owner = true
@@ -58,6 +138,56 @@ theme_override_font_sizes/font_size = 38
 text = "第1关 ｜ 步数: 20 ｜ 目标: 1200"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="LiveStars" type="HBoxContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchor_top = 0.095
+anchor_right = 1.0
+anchor_bottom = 0.165
+offset_right = -14.0
+grow_horizontal = 2
+mouse_filter = 2
+alignment = 2
+theme_override_constants/separation = 6
+
+[node name="LiveStar1" type="TextureRect" parent="LiveStars"]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="LiveStar2" type="TextureRect" parent="LiveStars"]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="LiveStar3" type="TextureRect" parent="LiveStars"]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="MuteButton" type="TextureButton" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchor_top = 0.1
+anchor_bottom = 0.1
+offset_left = 16.0
+offset_top = 0.0
+offset_right = 100.0
+offset_bottom = 84.0
+grow_vertical = 1
+mouse_filter = 0
+toggle_mode = true
+ignore_texture_size = true
+stretch_mode = 0
+texture_normal = ExtResource("5_sound_on")
+texture_pressed = ExtResource("6_sound_off")
 
 [node name="DebugLabel" type="Label" parent="."]
 unique_name_in_owner = true
@@ -108,8 +238,9 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Card" type="PanelContainer" parent="ResultOverlay/Center"]
-custom_minimum_size = Vector2(560, 560)
+custom_minimum_size = Vector2(640, 560)
 layout_mode = 2
+theme_override_styles/panel = SubResource("card_bg")
 
 [node name="VBox" type="VBoxContainer" parent="ResultOverlay/Center/Card"]
 layout_mode = 2
@@ -126,7 +257,6 @@ text = "过关啦！"
 horizontal_alignment = 1
 
 [node name="StarsBox" type="HBoxContainer" parent="ResultOverlay/Center/Card/VBox"]
-unique_name_in_owner = true
 unique_name_in_owner = true
 layout_mode = 2
 alignment = 1
@@ -156,11 +286,12 @@ expand_mode = 1
 [node name="DetailLabel" type="Label" parent="ResultOverlay/Center/Card/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.32, 0.4, 0.34, 1)
+theme_override_colors/font_color = Color(0.24, 0.32, 0.26, 1)
 theme_override_fonts/font = ExtResource("4_font")
-theme_override_font_sizes/font_size = 40
-text = "得分 0 ／ 目标 1200 ｜ 最高 0"
+theme_override_font_sizes/font_size = 32
+text = "得分 0 ｜ 目标 1200 ｜ 最高 0"
 horizontal_alignment = 1
+autowrap_mode = 3
 
 [node name="ButtonsBox" type="HBoxContainer" parent="ResultOverlay/Center/Card/VBox"]
 layout_mode = 2
@@ -171,14 +302,28 @@ theme_override_constants/separation = 32
 unique_name_in_owner = true
 custom_minimum_size = Vector2(220, 100)
 layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("4_font")
 theme_override_font_sizes/font_size = 44
+theme_override_styles/normal = SubResource("btn_normal")
+theme_override_styles/hover = SubResource("btn_hover")
+theme_override_styles/pressed = SubResource("btn_pressed")
+theme_override_styles/focus = SubResource("btn_hover")
 text = "再来一局"
 
 [node name="LevelsButton" type="Button" parent="ResultOverlay/Center/Card/VBox/ButtonsBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(220, 100)
 layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("4_font")
 theme_override_font_sizes/font_size = 44
+theme_override_styles/normal = SubResource("btn_normal")
+theme_override_styles/hover = SubResource("btn_hover")
+theme_override_styles/pressed = SubResource("btn_pressed")
+theme_override_styles/focus = SubResource("btn_hover")
 text = "选关"

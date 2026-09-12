@@ -261,6 +261,70 @@ def gen_petal_button(name, petal_tip, petal_base, center_light, center_dark):
     print(f"  {name} saved")
 
 
+def gen_obstacles():
+    """障碍物：藤蔓（永久格）、雪块（可破格）。"""
+    img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    # 藤蔓：绿色藤条交叉 + 叶片
+    for a in (-28, 22):
+        layer = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+        ld = ImageDraw.Draw(layer)
+        ld.rounded_rectangle([S / 2 - 34, -60, S / 2 + 34, S + 60], radius=34,
+                             fill=(76, 140, 70, 255), outline=(52, 104, 48, 255), width=10)
+        img.alpha_composite(layer.rotate(a, resample=Image.BICUBIC,
+                                         center=(S / 2, S / 2)))
+    for cx, cy, r in ((170, 200, 62), (620, 300, 70), (250, 600, 58), (540, 640, 66)):
+        d.ellipse([cx - r, cy - r * 0.62, cx + r, cy + r * 0.62],
+                  fill=(96, 172, 88, 255), outline=(60, 118, 56, 255), width=8)
+    img.resize((FINAL, FINAL), Image.LANCZOS).save(
+        os.path.join(BASE, "assets", "vine.png"))
+    print("  vine.png saved")
+    # 雪块：白色蓬松圆角块 + 高光
+    snow = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(snow)
+    sd.rounded_rectangle([70, 70, S - 70, S - 70], radius=110,
+                         fill=(240, 248, 255, 255), outline=(178, 208, 235, 255), width=12)
+    for cx, cy, r in ((270, 240, 34), (500, 300, 26), (330, 480, 30), (520, 520, 22)):
+        sd.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(255, 255, 255, 255))
+    sd.ellipse([180, 150, 300, 210], fill=(255, 255, 255, 220))
+    snow.resize((FINAL, FINAL), Image.LANCZOS).save(
+        os.path.join(BASE, "assets", "snow.png"))
+    print("  snow.png saved")
+
+
+def _draw_note(d, cx, cy, color):
+    """八分音符 ♪：符头 + 符干 + 符旗"""
+    d.ellipse([cx - 52, cy + 18, cx + 8, cy + 62], fill=color)
+    d.rounded_rectangle([cx - 6, cy - 70, cx + 14, cy + 42], radius=10, fill=color)
+    d.polygon([(cx + 10, cy - 72), (cx + 64, cy - 34), (cx + 10, cy - 26)], fill=color)
+
+
+def gen_sound_icons():
+    """静音按钮：奶白圆形花盘 + 音符（开）/ 灰音符+斜杠（静音）"""
+    size = 768
+    for name, muted in (("sound_on.png", False), ("sound_off.png", True)):
+        img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        # 底部柔影
+        sh = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        ImageDraw.Draw(sh).ellipse([70, 78, size - 70, size - 46], fill=(30, 50, 30, 60))
+        img.alpha_composite(sh.filter(ImageFilter.GaussianBlur(16)))
+        d = ImageDraw.Draw(img)
+        # 奶白圆底 + 嫩绿描边（与棋盘卡片同风格）
+        d.ellipse([70, 70, size - 70, size - 70],
+                  fill=(255, 253, 246, 255), outline=(178, 208, 178, 255), width=12)
+        note_color = (150, 155, 150, 255) if muted else (74, 140, 80, 255)
+        _draw_note(d, size // 2, size // 2, note_color)
+        if muted:
+            cx = cy = size // 2
+            d.line([(cx - 150, cy + 142), (cx + 150, cy - 142)],
+                   fill=(255, 255, 255, 235), width=46)
+            d.line([(cx - 150, cy + 142), (cx + 150, cy - 142)],
+                   fill=note_color, width=26)
+        img.resize((132, 132), Image.LANCZOS).save(
+            os.path.join(BASE, "assets", name))
+        print(f"  {name} saved")
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     for name, spec in FLOWERS.items():
@@ -272,6 +336,8 @@ def main():
     gen_bomb_flower()
     gen_star("star_gold.png", (255, 200, 40), (218, 155, 20))
     gen_star("star_gray.png", (200, 205, 200), (170, 175, 170))
+    gen_obstacles()
+    gen_sound_icons()
     # 花瓣按钮三态
     gen_petal_button("petal_btn_normal.png",
                      (252, 160, 195), (255, 226, 236), (255, 246, 218), (255, 226, 165))
