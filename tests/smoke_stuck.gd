@@ -30,7 +30,57 @@ func _process(_delta: float) -> void:
 		_trigger_invalid_swap()
 	elif _frame == 130:
 		_check_after_invalid_swap()
+		_check_integrity()
+		_check_segment_gravity()
+	elif _frame == 200:
+		_check_segment_result()
+	elif _frame == 230:
+		_check_watchdog()
 		get_tree().quit(1 if _failed else 0)
+
+
+## 藤蔓/障碍把一列切成多段：每段都要能独立补齐
+## （旧版只补「列顶段」→ 段内消掉后永久留洞，棋盘变稀疏 → 玩家觉得无解）
+func _check_segment_gravity() -> void:
+	var x := 2
+	var wall := Vector2i(x, 5)
+	var wall_tile: Tile = _board._tiles[x][5]
+	if wall_tile != null:
+		_board._tiles[x][5] = null
+		wall_tile.queue_free()
+	_board._blocks[wall] = -1  # 造一堵竖墙
+	for y in [7, 8]:
+		var t: Tile = _board._tiles[x][y]
+		if t != null:
+			_board._tiles[x][y] = null
+			t.queue_free()
+	_board._apply_gravity()
+
+
+func _check_segment_result() -> void:
+	var holes := 0
+	for y in range(6, 11):
+		if not _board._blocks.has(Vector2i(2, y)) and _board._tiles[2][y] == null:
+			holes += 1
+	print("PASS: 分段重力向下段补齐（空洞 0）" if holes == 0
+		else "FAIL: 墙下段仍有 %d 个空洞" % holes)
+	_assert(holes == 0)
+	# 模拟 _busy 卡死（协程意外中断）→ 看门狗应在下一帧自愈
+	_board._busy = true
+	_board._busy_since = Time.get_ticks_msec() - 9000
+
+
+func _check_watchdog() -> void:
+	var ok: bool = not _board._busy
+	print("PASS: 输入看门狗自愈（_busy 重置）" if ok else "FAIL: 看门狗未生效")
+	_assert(ok)
+	var holes := 0
+	for x in range(7):
+		for y in range(11):
+			if not _board._blocks.has(Vector2i(x, y)) and _board._tiles[x][y] == null:
+				holes += 1
+	print("PASS: 自救后全盘无空洞" if holes == 0 else "FAIL: 全盘空洞 %d" % holes)
+	_assert(holes == 0)
 
 
 ## 把可玩格涂成 2×2 同色方块图案：既无三连、也无任何能成立三连的交换

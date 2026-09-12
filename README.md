@@ -1,7 +1,7 @@
 # 鲜花消消乐 · Flower Match 3
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.1.2-blue.svg)](releases)
+[![Version](https://img.shields.io/badge/Version-1.1.3-blue.svg)](releases)
 [![Engine](https://img.shields.io/badge/Godot-4.7-478cbf.svg)](https://godotengine.org)
 
 > 一款用 Godot 4 开发的鲜花主题休闲三消手游（Android）。
@@ -44,6 +44,7 @@
   - L5 终极挑战：**5 色棋盘**（少色更易连消，爽快感拉满）+ 双障碍
 - **基本规则**：7×11 棋盘、5~6 种花朵（关卡不同），**点击选中→点击相邻花朵交换**，或**按住花朵轻划到相邻花朵**直接交换；无效交换自动换回（不扣步数）
 - **死局自救**：棋盘无可消除内容时自动重排（保留特殊花与障碍），并提示「无可消除，重新排列！」；无效交换也会触发检查，怎么都不会卡住
+- **棋盘自愈**：藤蔓/雪块把列切开后，每段独立下落补充（不会留空洞）；每次移动后自动补洞 + 输入看门狗兜底
 - **三星评价**：**玩满步数后按最终得分评星**——达标 1★、1.35× 2★、1.75× 3★；提前打到三星线可完美提前收官；右上角星星随分数实时点亮
 - **连锁加倍**：消除后花朵坠落补充，连锁消除得分翻倍，伴随花瓣粒子飞散与得分浮字
 - **特殊花朵**：

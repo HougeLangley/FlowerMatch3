@@ -34,6 +34,8 @@ var _rng := RandomNumberGenerator.new()
 var _tiles: Array = []  # _tiles[x][y] -> Tile 或 null
 var _selected: Tile = null
 var _busy := false
+var _busy_since := 0  # 输入看门狗：_busy 置 true 的时刻（毫秒）
+const BUSY_TIMEOUT_MS := 8000  # 正常最长连锁约 5 秒，超过则视为异常并自愈
 var _score := 0
 var _tile_size := 100.0
 var _origin := Vector2.ZERO
@@ -58,6 +60,18 @@ func _ready() -> void:
 	_add_backdrop(view)      # 先加卡片（树序最底）
 	_load_level_config()      # 再加障碍精灵（盖在卡片上）
 	_build_grid()
+
+
+## 输入看门狗：异常情况下 _busy 卡住（协程意外中断）也能自愈，避免输入永久失效
+func _process(_delta: float) -> void:
+	if not _busy:
+		return
+	var stuck_ms := Time.get_ticks_msec() - _busy_since
+	if stuck_ms > BUSY_TIMEOUT_MS:
+		print("[self-heal] 输入看门狗：_busy 卡住 %.1f 秒，已重置" % (stuck_ms / 1000.0))
+		_busy = false
+		_repair_holes()
+		_check_deadlock()
 
 
 func cell_to_world(p_cell: Vector2i) -> Vector2:
@@ -271,9 +285,16 @@ func _on_tile_pressed(tile: Tile) -> void:
 
 func _try_swap(a: Tile, b: Tile) -> void:
 	_busy = true
+	_busy_since = Time.get_ticks_msec()  # 输入看门狗基准
 	a.set_selected(false)
 	_selected = null
 	await _swap_visual(a, b)
+	if not (is_instance_valid(a) and is_instance_valid(b)):
+		# 棋子可能在交换过程中被销毁（旧版此处报错 → 协程中断 → _busy 永久为 true → 点击全失效）
+		print("[self-heal] 交换后棋子已销毁，安全收尾")
+		_busy = false
+		_check_deadlock()
+		return
 	if a.special == Tile.Special.MAGIC or b.special == Tile.Special.MAGIC:
 		await _resolve_magic(a, b)
 		await _resolve_matches([a.cell, b.cell])
@@ -289,6 +310,8 @@ func _try_swap(a: Tile, b: Tile) -> void:
 
 
 func _swap_visual(a: Tile, b: Tile, silent := false) -> void:
+	if not (is_instance_valid(a) and is_instance_valid(b)):
+		return
 	var vertical := a.cell.x == b.cell.x  # 同列 = 纵向交换（音色略有区分）
 	var mid := (cell_to_world(a.cell) + cell_to_world(b.cell)) * 0.5
 	_tiles[a.cell.x][a.cell.y] = b
@@ -394,10 +417,30 @@ func _resolve_matches(preferred: Array[Vector2i] = []) -> void:
 
 
 ## 死局自救（借鉴同类游戏标准做法：无可消除时自动重排）：
+## 先补洞（异常空洞会让棋盘变稀疏、看着“没得消”）再检查可行步
 ## 注意魔力花也算可行步（与任意相邻棋子交换均有效），由纯逻辑层统一判定
 func _check_deadlock() -> void:
+	_repair_holes()
 	if not MatchLogic.has_possible_move(_snapshot(), GRID_W, GRID_H):
 		_reshuffle()
+
+
+## 兑底：可玩格若有空洞立即补齐（并避免补出即时三连），保证棋盘永远完整
+func _repair_holes() -> void:
+	var filled := 0
+	for x in range(GRID_W):
+		for y in range(GRID_H):
+			if _blocks.has(Vector2i(x, y)) or _tiles[x][y] != null:
+				continue
+			var tile := _spawn_tile(Vector2i(x, y), _rng.randi_range(0, _flower_types - 1), 0)
+			_tiles[x][y] = tile
+			var guard := 0
+			while guard < 32 and not MatchLogic.find_matches(_snapshot(), GRID_W, GRID_H).is_empty():
+				tile.set_flower(_rng.randi_range(0, _flower_types - 1))
+				guard += 1
+			filled += 1
+	if filled > 0:
+		print("[self-heal] 补洞 ", filled, " 格")
 
 
 ## 棋盘中心坐标（提示浮字/音效定位用）
@@ -542,33 +585,45 @@ func _cells_of_type(target: int) -> Array[Vector2i]:
 	return out
 
 
+## 重力：障碍把每列切成若干段，**每段独立下落并补齐**
+## （旧版只补「列顶段」→ 藤蔓/雪块之间的段消掉后永久留洞，玩家会觉得棋盘空空/无解）
 func _apply_gravity() -> void:
 	var last_tween: Tween = null
 	for x in range(GRID_W):
-		var write := GRID_H - 1
-		for y in range(GRID_H - 1, -1, -1):
-			if _blocks.has(Vector2i(x, y)):
-				write = y - 1  # 障碍是墙：上方元素止步于障碍上缘
-				continue
-			var tile: Tile = _tiles[x][y]
-			if tile == null:
-				continue
-			if y != write:
-				_tiles[x][write] = tile
-				_tiles[x][y] = null
-				tile.cell = Vector2i(x, write)
+		for seg in _column_segments(x):
+			var top: int = seg[0]
+			var bottom: int = seg[1]
+			var write := bottom
+			for y in range(bottom, top - 1, -1):
+				var tile: Tile = _tiles[x][y]
+				if tile == null:
+					continue
+				if y != write:
+					_tiles[x][write] = tile
+					_tiles[x][y] = null
+					tile.cell = Vector2i(x, write)
+					last_tween = tile.move_to(cell_to_world(tile.cell))
+				write -= 1
+			var fall := write - top + 1
+			for y in range(write, top - 1, -1):
+				var type := _rng.randi_range(0, _flower_types - 1)
+				var tile := _spawn_tile(Vector2i(x, y), type, fall)
+				_tiles[x][y] = tile  # 关键：新棋子必须注册进网格，否则不可交互/不参与匹配
 				last_tween = tile.move_to(cell_to_world(tile.cell))
-			write -= 1
-		var empty_count := write + 1
-		for y in range(write, -1, -1):
-			if _blocks.has(Vector2i(x, y)):
-				continue  # 双保险（理论上不可达：write 只会停在障碍下方）
-			var type := _rng.randi_range(0, _flower_types - 1)
-			var tile := _spawn_tile(Vector2i(x, y), type, empty_count)
-			_tiles[x][y] = tile  # 关键：新棋子必须注册进网格，否则不可交互/不参与匹配
-			last_tween = tile.move_to(cell_to_world(tile.cell))
 	if last_tween != null:
 		await last_tween.finished
+
+
+## 把一列按障碍切成若干可玩段：返回 [[top, bottom], ...]（障碍格不属于任何段）
+func _column_segments(x: int) -> Array:
+	var segs: Array = []
+	var start := 0
+	for y in range(GRID_H + 1):
+		if y == GRID_H or _blocks.has(Vector2i(x, y)):
+			if y > start:
+				segs.append([start, y - 1])
+			start = y + 1
+	return segs
 
 
 ## 无可行步时重排：保留特殊花与障碍，重新着色其余棋子并保证重排后有解；
