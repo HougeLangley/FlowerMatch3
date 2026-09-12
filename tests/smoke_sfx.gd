@@ -9,7 +9,7 @@ extends Node
 
 const SOUND_FILES := [
 	"pop_a", "pop_b", "pop_c", "swap", "invalid", "magic", "line", "boom",
-	"special", "break", "select", "win", "star", "lose",
+	"special", "break", "shuffle", "select", "win", "star", "lose",
 ]
 
 var _frame := 0
@@ -80,11 +80,12 @@ func _check_play_api() -> void:
 	_sfx.play_boom(p)
 	_sfx.play_magic(p)
 	_sfx.play_break(p)
+	_sfx.play_reshuffle(p)
 	_sfx.play_star(0)
 	_sfx.play_star(2)
 	_sfx.play_win()
 	_sfx.play_lose()
-	print("PASS: 全部 %d 个播放 API 调用无异常" % 16)
+	print("PASS: 全部 %d 个播放 API 调用无异常" % 17)
 
 
 func _check_voice_pool() -> void:

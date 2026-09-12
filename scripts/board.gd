@@ -182,9 +182,9 @@ func _snapshot() -> Array[int]:
 		for y in range(GRID_H):
 			var tile: Tile = _tiles[x][y]
 			if tile == null:
-				g[y * GRID_W + x] = -1
+				g[y * GRID_W + x] = MatchLogic.EMPTY
 			elif tile.special == Tile.Special.MAGIC:
-				g[y * GRID_W + x] = -2
+				g[y * GRID_W + x] = MatchLogic.MAGIC
 			else:
 				g[y * GRID_W + x] = tile.flower_type
 	return g
@@ -281,6 +281,7 @@ func _try_swap(a: Tile, b: Tile) -> void:
 	elif MatchLogic.find_matches(_snapshot(), GRID_W, GRID_H).is_empty():
 		await _swap_visual(a, b, true)  # 无效交换，换回（不消耗步数）
 		Sfx.play_invalid((cell_to_world(a.cell) + cell_to_world(b.cell)) * 0.5)
+		_check_deadlock()  # 无效交换也可能是「棋盘已无解」的信号 → 立即自救
 	else:
 		await _resolve_matches([a.cell, b.cell])
 		move_made.emit()
@@ -389,8 +390,19 @@ func _resolve_matches(preferred: Array[Vector2i] = []) -> void:
 				Sfx.play_special(cell_to_world(cr["cell"]))
 		await get_tree().create_timer(0.22).timeout
 		await _apply_gravity()
-	if not _has_magic() and not MatchLogic.has_possible_move(_snapshot(), GRID_W, GRID_H):
+	_check_deadlock()
+
+
+## 死局自救（借鉴同类游戏标准做法：无可消除时自动重排）：
+## 注意魔力花也算可行步（与任意相邻棋子交换均有效），由纯逻辑层统一判定
+func _check_deadlock() -> void:
+	if not MatchLogic.has_possible_move(_snapshot(), GRID_W, GRID_H):
 		_reshuffle()
+
+
+## 棋盘中心坐标（提示浮字/音效定位用）
+func _board_center() -> Vector2:
+	return _origin + Vector2(GRID_W, GRID_H) * _tile_size * 0.5
 
 
 ## 特殊花连锁：被消除的行/列/魔力花继续引爆
@@ -530,15 +542,6 @@ func _cells_of_type(target: int) -> Array[Vector2i]:
 	return out
 
 
-func _has_magic() -> bool:
-	for x in range(GRID_W):
-		for y in range(GRID_H):
-			var tile: Tile = _tiles[x][y]
-			if tile != null and tile.special == Tile.Special.MAGIC:
-				return true
-	return false
-
-
 func _apply_gravity() -> void:
 	var last_tween: Tween = null
 	for x in range(GRID_W):
@@ -568,15 +571,24 @@ func _apply_gravity() -> void:
 		await last_tween.finished
 
 
-## 无可行步时原地重排（保证无初始消除且有解），特殊花重置
+## 无可行步时重排：保留特殊花与障碍，重新着色其余棋子并保证重排后有解；
+## 带提示浮字 + 音效 + 全盘脉冲（借鉴同类游戏的「重排」反馈，不静默发生）
 func _reshuffle() -> void:
-	var types := MatchLogic.make_grid(GRID_W, GRID_H, _flower_types, _rng, _blocks)
-	while not MatchLogic.has_possible_move(types, GRID_W, GRID_H):
-		types = MatchLogic.make_grid(GRID_W, GRID_H, _flower_types, _rng, _blocks)
+	var keep: Dictionary = {}
 	for x in range(GRID_W):
 		for y in range(GRID_H):
 			var tile: Tile = _tiles[x][y]
-			if tile == null:
-				continue
-			tile.set_special(Tile.Special.NONE)
+			if tile != null and tile.special != Tile.Special.NONE:
+				keep[Vector2i(x, y)] = true  # 特殊花保留（玩家的资产不能被重排吃掉）
+	var types := MatchLogic.reshuffle_grid(_snapshot(), GRID_W, GRID_H,
+		_flower_types, _rng, keep)
+	for x in range(GRID_W):
+		for y in range(GRID_H):
+			var tile: Tile = _tiles[x][y]
+			if tile == null or tile.special != Tile.Special.NONE:
+				continue  # 障碍格与特殊花保持原样
 			tile.set_flower(types[y * GRID_W + x])
+			tile.pulse()
+	Sfx.play_reshuffle(_board_center())
+	_spawn_float_text(_board_center() + Vector2(0.0, -60.0), "无可消除，重新排列！",
+		Color(0.98, 0.72, 0.15), 50)

@@ -7,6 +7,9 @@ extends RefCounted
 const DIR_H := 0  # 横向连
 const DIR_V := 1  # 纵向连
 
+const EMPTY := -1  # 空格/障碍（无棋子，不可交换）
+const MAGIC := -2  # 魔力花（不参与颜色匹配，但与任意相邻棋子交换均有效）
+
 
 ## 生成无初始消除的网格；blocked 中的格子置为 -1（障碍/真空位）
 static func make_grid(w: int, h: int, type_count: int, rng: RandomNumberGenerator,
@@ -138,6 +141,67 @@ static func area_cells(center: Vector2i, w: int, h: int, radius: int = 1) -> Arr
 	return out
 
 
+## 重排：保留 keep 格（特殊花）与障碍，其余格重新着色；
+## 保证「无初始消除」且「存在可行步」。逐级降级：保留特殊花 → 放弃保留全盘重生成。
+static func reshuffle_grid(g: Array[int], w: int, h: int, type_count: int,
+		rng: RandomNumberGenerator, keep: Dictionary = {}) -> Array[int]:
+	var fallback: Array[int] = _copy_grid(g, w, h)
+	for attempt in range(40):
+		var out: Array[int] = _recolor(g, w, h, type_count, rng, keep)
+		fallback = out
+		if find_matches(out, w, h).is_empty() and has_possible_move(out, w, h):
+			return out
+	# 降级：不动特殊花很难两全时，全盘重生成（放弃保留特殊花）
+	var blocked := blocked_of(g, w, h)
+	for attempt in range(40):
+		var fresh := make_grid(w, h, type_count, rng, blocked)
+		fallback = fresh
+		if has_possible_move(fresh, w, h):
+			return fresh
+	return fallback  # 极端兕底（理论上不可达）
+
+
+## 把网格中的空格（-1）转成 make_grid 需要的 blocked 字典
+static func blocked_of(g: Array[int], w: int, h: int) -> Dictionary:
+	var d: Dictionary = {}
+	for y in range(h):
+		for x in range(w):
+			if g[y * w + x] == EMPTY:
+				d[Vector2i(x, y)] = true
+	return d
+
+
+## 重新着色：障碍与 keep 格不动，其余格随机取值（避免与已定的左/上邻居形成三连）
+static func _recolor(g: Array[int], w: int, h: int, type_count: int,
+		rng: RandomNumberGenerator, keep: Dictionary) -> Array[int]:
+	var out: Array[int] = _copy_grid(g, w, h)
+	for y in range(h):
+		for x in range(w):
+			var idx := y * w + x
+			if out[idx] == EMPTY or keep.has(Vector2i(x, y)):
+				continue
+			var banned: Dictionary = {}
+			if x >= 2 and out[idx - 1] >= 0 and out[idx - 1] == out[idx - 2]:
+				banned[out[idx - 1]] = true
+			if y >= 2 and out[idx - w] >= 0 and out[idx - w] == out[idx - 2 * w]:
+				banned[out[idx - w]] = true
+			var t: int = rng.randi_range(0, type_count - 1)
+			var guard := 0
+			while banned.has(t) and guard < 64:
+				t = rng.randi_range(0, type_count - 1)
+				guard += 1
+			out[idx] = t
+	return out
+
+
+static func _copy_grid(g: Array[int], w: int, h: int) -> Array[int]:
+	var out: Array[int] = []
+	out.resize(w * h)
+	for i in range(w * h):
+		out[i] = g[i]
+	return out
+
+
 static func swap_cells(g: Array[int], w: int, a: Vector2i, b: Vector2i) -> void:
 	var ai := a.y * w + a.x
 	var bi := b.y * w + b.x
@@ -146,7 +210,8 @@ static func swap_cells(g: Array[int], w: int, a: Vector2i, b: Vector2i) -> void:
 	g[bi] = tmp
 
 
-## 是否存在可行步（尝试所有相邻交换，检测后换回）
+## 是否存在玩家真的可以执行的可行步（与真实交换规则一致）
+## 规则：障碍格无棋子不可交换；魔力花与任意相邻棋子交换均有效
 static func has_possible_move(g: Array[int], w: int, h: int) -> bool:
 	for y in range(h):
 		for x in range(w):
@@ -155,6 +220,12 @@ static func has_possible_move(g: Array[int], w: int, h: int) -> bool:
 				var to: Vector2i = from + dir
 				if to.x >= w or to.y >= h:
 					continue
+				var a: int = g[from.y * w + from.x]
+				var b: int = g[to.y * w + to.x]
+				if a == EMPTY or b == EMPTY:
+					continue  # 障碍/空格不可交换（旧版遗漏此处 → 误判有解 → 玩家死锁）
+				if a == MAGIC or b == MAGIC:
+					return true  # 魔力花可任意交换，必定有效
 				swap_cells(g, w, from, to)
 				var found := not find_matches(g, w, h).is_empty()
 				swap_cells(g, w, from, to)

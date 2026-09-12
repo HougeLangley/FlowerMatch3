@@ -16,6 +16,9 @@ func _init() -> void:
 	_test_find_matches()
 	_test_is_adjacent()
 	_test_has_possible_move_true()
+	_test_has_possible_move_obstacles()
+	_test_has_possible_move_magic()
+	_test_reshuffle_keeps_specials()
 	_test_swap_cells()
 	_test_match_groups()
 	_test_magic_excluded()
@@ -94,6 +97,58 @@ func _test_has_possible_move_true() -> void:
 	# 检测过程不得改变网格
 	var expect: Array[int] = [0, 1, 0, 1, 0, 2, 0, 1, 2]
 	_check(g == expect, "has_possible_move: grid unmutated")
+
+
+## 回归：障碍格(-1)无棋子不可交换，不能被当成可行步（旧版误判 → 玩家死锁）
+func _test_has_possible_move_obstacles() -> void:
+	var g: Array[int] = [
+		3, 0, -1, 0, 0, -1, -1,
+		1, 2, 3, 4, 5, 1, 2,
+		2, 3, 4, 5, 1, 2, 3,
+	]
+	_check(ML.find_matches(g, 7, 3).is_empty(), "obstacle: fixture has no matches")
+	_check(not ML.has_possible_move(g, 7, 3),
+		"obstacle: move via empty cell is fake → no move")
+
+
+## 魔力花：与任意相邻棋子交换都有效；被障碍围死则不算可行步
+func _test_has_possible_move_magic() -> void:
+	var g: Array[int] = [
+		1, 2, 3,
+		4, ML.MAGIC, 5,
+		6, 1, 2,
+	]
+	_check(ML.has_possible_move(g, 3, 3), "magic: adjacent swap always valid")
+	var walled: Array[int] = [
+		0, -1, 1,
+		-1, ML.MAGIC, -1,
+		1, -1, 0,
+	]
+	_check(not ML.has_possible_move(walled, 3, 3), "magic: walled-in = no move")
+
+
+## 重排：保留特殊花与障碍；保证无初始消除且有可行步；不改动输入网格
+func _test_reshuffle_keeps_specials() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 11
+	var w := 7
+	var h := 4
+	# 3×3 障碍块（魔力花放中心，被完全围死，不构成可行步）
+	var blocked := {}
+	for dx in range(3):
+		for dy in range(3):
+			blocked[Vector2i(dx, dy)] = -1
+	var g := ML.make_grid(w, h, 6, rng, blocked)
+	g[1 * w + 1] = ML.MAGIC
+	var movable_before: bool = ML.has_possible_move(g, w, h)
+	var keep := {Vector2i(1, 1): true}
+	var out := ML.reshuffle_grid(g, w, h, 6, rng, keep)
+	_check(out[1 * w + 1] == ML.MAGIC, "reshuffle: magic kept in place")
+	_check(out[0] == -1 and out[2 * w + 2] == -1, "reshuffle: obstacles untouched")
+	_check(ML.find_matches(out, w, h).is_empty(), "reshuffle: no initial matches")
+	_check(ML.has_possible_move(out, w, h), "reshuffle: solvable after shuffle")
+	_check(g[1 * w + 1] == ML.MAGIC, "reshuffle: input grid not mutated")
+	_check(movable_before == true, "reshuffle: fixture itself is playable")
 
 
 func _test_swap_cells() -> void:

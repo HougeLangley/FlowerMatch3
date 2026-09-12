@@ -212,6 +212,12 @@ def main():
                      float(rng.uniform(0.0, 0.10)))
     save("break.wav", br, 0.60)
 
+    # ---- 重排：柔和旋风（噪声上扫）+ 轻铃点缀（死局自救反馈）----
+    sw = noise_sweep(0.45, 600, 3000, decay=4.5, seed=91) * 0.8
+    for i, f in enumerate((G5, A5, C6)):
+        sw = _mix_at(sw, fm_bell(f, 0.35, ratio=3.0, index=2.0, decay=8.0) * 0.5, 0.06 * i)
+    save("shuffle.wav", reverb(sw, mix=0.22), 0.62)
+
     # ---- 点选：极轻的"嗒"（短促、低音量）----
     save("select.wav", np.sin(2 * np.pi * 880 * _t(0.08)) * np.exp(-30.0 * _t(0.08)), 0.30)
 
