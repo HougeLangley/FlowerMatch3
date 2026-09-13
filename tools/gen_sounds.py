@@ -12,7 +12,7 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "
 
 # 音名频率（C 大调 + 五声音阶）
 C5, D5, E5, G5, A5 = 523.25, 587.33, 659.26, 783.99, 880.00
-C6, E6, G6, B6 = 1046.50, 1318.51, 1567.98, 1975.53
+C6, E6, G6, A6, B6 = 1046.50, 1318.51, 1567.98, 1760.00, 1975.53
 A4, F4, D4 = 440.00, 349.23, 293.66
 PENTA = [C5, D5, E5, G5, A5, C6]
 
@@ -211,6 +211,12 @@ def main():
         br = _mix_at(br, noise_burst(0.03, decay=90.0, seed=int(rng.integers(1000)), gain=0.5),
                      float(rng.uniform(0.0, 0.10)))
     save("break.wav", br, 0.60)
+
+    # ---- 提示：柔和两声小铃（长时间找不到可行步时的轻提醒，音量克制）----
+    hint = _sum(fm_bell(E6, 0.34, ratio=2.0, index=1.6, decay=9.0),
+                _mix_at(np.zeros(int(SR * 0.5)),
+                        fm_bell(A6, 0.30, ratio=2.0, index=1.4, decay=10.0) * 0.8, 0.11))
+    save("hint.wav", reverb(hint, mix=0.18), 0.42)
 
     # ---- 重排：柔和旋风（噪声上扫）+ 轻铃点缀（死局自救反馈）----
     sw = noise_sweep(0.45, 600, 3000, decay=4.5, seed=91) * 0.8

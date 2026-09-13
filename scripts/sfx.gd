@@ -36,6 +36,7 @@ func _ready() -> void:
 	_add_pool("magic", ["magic"], 2)
 	_add_pool("break", ["break"], 3)
 	_add_pool("shuffle", ["shuffle"], 2)
+	_add_pool("hint", ["hint"], 2)
 	_add_pool("star", ["star"], 2)
 	_add_pool("win", ["win"], 1)
 	_add_pool("lose", ["lose"], 1)
@@ -121,6 +122,10 @@ func play_break(pos: Vector2) -> void:
 
 func play_reshuffle(pos: Vector2) -> void:
 	_emit("shuffle", randf_range(0.98, 1.02), pos)
+
+
+func play_hint(pos: Vector2) -> void:
+	_emit("hint", randf_range(0.99, 1.01), pos)
 
 
 func play_star(index: int) -> void:

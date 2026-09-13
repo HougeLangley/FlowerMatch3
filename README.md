@@ -1,7 +1,7 @@
 # 鲜花消消乐 · Flower Match 3
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.1.3-blue.svg)](releases)
+[![Version](https://img.shields.io/badge/Version-1.1.4-blue.svg)](releases)
 [![Engine](https://img.shields.io/badge/Godot-4.7-478cbf.svg)](https://godotengine.org)
 
 > 一款用 Godot 4 开发的鲜花主题休闲三消手游（Android）。
@@ -35,7 +35,7 @@
 
 ## 🌸 玩法介绍
 
-- **多关卡**：5 个关卡难度递进（目标分 1200 → 6500，步数 20 → 28），过关解锁下一关
+- **多关卡**：5 个关卡难度递进（目标分 1200 → 5200，步数 20 → 30），过关解锁下一关；门槛按实测得分分布调校（3 星可达率高）
 - **关卡差异化**：每关都有新鲜感——
   - L1 花园初遇：全开放棋盘（引导关）
   - L2 藤蔓缠绕：**藤蔓障碍**永久占格，布局变化
@@ -44,6 +44,7 @@
   - L5 终极挑战：**5 色棋盘**（少色更易连消，爽快感拉满）+ 双障碍
 - **基本规则**：7×11 棋盘、5~6 种花朵（关卡不同），**点击选中→点击相邻花朵交换**，或**按住花朵轻划到相邻花朵**直接交换；无效交换自动换回（不扣步数）
 - **死局自救**：棋盘无可消除内容时自动重排（保留特殊花与障碍），并提示「无可消除，重新排列！」；无效交换也会触发检查，怎么都不会卡住
+- **智能提示**：超过 6 秒没找到可消的，自动高亮一组可行步（轻音效 + 棋子脉动），玩起来不费力
 - **棋盘自愈**：藤蔓/雪块把列切开后，每段独立下落补充（不会留空洞）；每次移动后自动补洞 + 输入看门狗兜底
 - **三星评价**：**玩满步数后按最终得分评星**——达标 1★、1.35× 2★、1.75× 3★；提前打到三星线可完美提前收官；右上角星星随分数实时点亮
 - **连锁加倍**：消除后花朵坠落补充，连锁消除得分翻倍，伴随花瓣粒子飞散与得分浮字
@@ -173,7 +174,7 @@ A flower-themed match-3 puzzle game for Android, built with **Godot 4.7** and GD
 
 ## Features
 
-- 5 levels with increasing difficulty (score targets 1200 → 6500, moves 20 → 28) and a **star rating based on the final score after all moves** (1★ = target, 2★ = 1.35×, 3★ = 1.75×; hitting the 3★ line ends the level early), with live star progress in the HUD
+- 5 levels with increasing difficulty (score targets 1200 → 5200, moves 20 → 30), tuned against measured score distributions so 3★ stays achievable and a **star rating based on the final score after all moves** (1★ = target, 2★ = 1.35×, 3★ = 1.75×; hitting the 3★ line ends the level early), with live star progress in the HUD
 - 5 distinctive level layouts: open board / vines / breakable snow / heart-shaped board / 5-color finale with dual obstacles
 - 7×11 board with 5–6 flower types (varies by level); **tap-select then tap a neighbour to swap**, or **press and swipe**; invalid swaps revert without costing a move; auto-reshuffle when no moves are left
 - Cascades with a combo score multiplier, floating score text and petal particle effects
@@ -182,6 +183,7 @@ A flower-themed match-3 puzzle game for Android, built with **Godot 4.7** and GD
 - Animated looping video backgrounds (two alternating themes, seamless palindrome loops generated with MiniMax H3)
 - Special tiles: 4-match → line blaster, L/T-shape → 3×3 bomb, 5-match → rainbow magic flower; chain reactions supported
 - Android back gesture/button navigation: in-game → level select, level select → exit
+- Idle hint system: highlights a valid move after ~6 s so players never feel stuck
 - Fully procedural art & audio assets (PIL + numpy), zero external copyright dependencies
 - AI-generated app icon & skippable intro promo video (MiniMax image / H3 video models)
 

@@ -36,6 +36,10 @@ var _selected: Tile = null
 var _busy := false
 var _busy_since := 0  # 输入看门狗：_busy 置 true 的时刻（毫秒）
 const BUSY_TIMEOUT_MS := 8000  # 正常最长连锁约 5 秒，超过则视为异常并自愈
+const HINT_IDLE_SEC := 6.0     # 玩家静止多久后给提示（略宽于竞品，不打扰）
+const HINT_REPEAT_SEC := 4.0   # 之后每隔多久再提醒一次
+var _hint_timer := 0.0
+var _last_hint: Array[Vector2i] = []  # 最近一次的提示（供测试/诊断）
 var _score := 0
 var _tile_size := 100.0
 var _origin := Vector2.ZERO
@@ -62,16 +66,34 @@ func _ready() -> void:
 	_build_grid()
 
 
-## 输入看门狗：异常情况下 _busy 卡住（协程意外中断）也能自愈，避免输入永久失效
-func _process(_delta: float) -> void:
-	if not _busy:
+## 每帧：① 输入看门狗（_busy 卡住自愈）② 长时间无操作的可行步提示
+func _process(delta: float) -> void:
+	if _busy:
+		var stuck_ms := Time.get_ticks_msec() - _busy_since
+		if stuck_ms > BUSY_TIMEOUT_MS:
+			print("[self-heal] 输入看门狗：_busy 卡住 %.1f 秒，已重置" % (stuck_ms / 1000.0))
+			_busy = false
+			_repair_holes()
+			_check_deadlock()
 		return
-	var stuck_ms := Time.get_ticks_msec() - _busy_since
-	if stuck_ms > BUSY_TIMEOUT_MS:
-		print("[self-heal] 输入看门狗：_busy 卡住 %.1f 秒，已重置" % (stuck_ms / 1000.0))
-		_busy = false
-		_repair_holes()
-		_check_deadlock()
+	# 提示：借鉴同类游戏——玩家长时间找不到可消的，主动高亮一个可行步
+	_hint_timer += delta
+	if _hint_timer >= HINT_IDLE_SEC:
+		_hint_timer = HINT_IDLE_SEC - HINT_REPEAT_SEC
+		_show_hint()
+
+
+## 高亮一个可行步（两颗棋子脉动 + 轻提示音）；真无解时交给 _check_deadlock 重排
+func _show_hint() -> void:
+	var mv := MatchLogic.find_any_move(_snapshot(), GRID_W, GRID_H)
+	if mv.is_empty():
+		return
+	_last_hint = mv
+	for c in mv:
+		var tile: Tile = _tiles[c.x][c.y]
+		if tile != null:
+			tile.hint_wiggle()
+	Sfx.play_hint(cell_to_world(mv[0]))
 
 
 func cell_to_world(p_cell: Vector2i) -> Vector2:
@@ -229,6 +251,7 @@ func _begin_pointer(pos: Vector2) -> void:
 	_drag_consumed = false
 	_drag_start_pos = pos
 	_drag_start_cell = world_to_cell(pos)
+	_hint_timer = 0.0  # 有操作就重置提示计时
 	input_received.emit(pos, _drag_start_cell)
 	if not is_valid_cell(_drag_start_cell):
 		return

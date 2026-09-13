@@ -4,15 +4,15 @@ extends Node
 
 const LEVELS: Array[Dictionary] = [
 	{"target": 1200, "moves": 20, "flowers": 6, "theme": 0, "vines": [], "snow": []},
-	{"target": 2000, "moves": 22, "flowers": 6, "theme": 1,
-		"vines": [[1, 3], [3, 3], [5, 3], [1, 7], [3, 7], [5, 7]], "snow": []},
-	{"target": 3200, "moves": 24, "flowers": 6, "theme": 0, "vines": [],
+	{"target": 1800, "moves": 24, "flowers": 6, "theme": 1,
+		"vines": [[1, 3], [5, 3], [1, 7], [5, 7]], "snow": []},
+	{"target": 2400, "moves": 26, "flowers": 6, "theme": 0, "vines": [],
 		"snow": [[2, 1], [4, 1], [2, 2], [4, 2], [3, 3], [2, 5], [4, 5], [3, 6]]},
-	{"target": 4800, "moves": 26, "flowers": 6, "theme": 1,
+	{"target": 2300, "moves": 30, "flowers": 6, "theme": 1,
 		"vines": [[0, 0], [1, 0], [3, 0], [5, 0], [6, 0], [0, 1], [6, 1],
 			[0, 9], [0, 10], [6, 9], [6, 10]],
 		"snow": [[3, 2], [3, 3], [2, 4], [4, 4], [3, 5]]},
-	{"target": 6500, "moves": 28, "flowers": 5, "theme": 0,
+	{"target": 5200, "moves": 30, "flowers": 5, "theme": 0,
 		"vines": [[0, 5], [6, 5]],
 		"snow": [[1, 2], [5, 2], [2, 4], [4, 4], [1, 7], [5, 7], [3, 9]]},
 ]

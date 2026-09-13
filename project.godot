@@ -15,7 +15,7 @@ run/main_scene="res://scenes/intro.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://icon.png"
 config/quit_on_go_back=false
-config/version="1.1.3"
+config/version="1.1.4"
 
 [display]
 

@@ -36,6 +36,9 @@ func _process(_delta: float) -> void:
 		_check_segment_result()
 	elif _frame == 230:
 		_check_watchdog()
+		_board._hint_timer = _board.HINT_IDLE_SEC  # 推进计时 → 下一帧触发提示
+	elif _frame == 250:
+		_check_hint()
 		get_tree().quit(1 if _failed else 0)
 
 
@@ -176,6 +179,27 @@ func _check_integrity() -> void:
 				bad += 1
 	print("PASS: 网格完整（障碍格空、可玩格满）" if bad == 0 else "FAIL: 网格异常 %d 处" % bad)
 	_assert(bad == 0)
+
+
+## 提示系统：长时间无操作应高亮一个真实可行步
+func _check_hint() -> void:
+	var mv: Array[Vector2i] = _board._last_hint
+	var ok: bool = mv.size() == 2
+	print("PASS: 提示系统给出可行步" if ok else "FAIL: 提示未触发")
+	_assert(ok)
+	if not ok:
+		return
+	var tiles_ok := true
+	for c in mv:
+		if _board._tiles[c.x][c.y] == null:
+			tiles_ok = false
+	print("PASS: 提示的两格都有棋子" if tiles_ok else "FAIL: 提示格子为空")
+	_assert(tiles_ok)
+	var g: Array[int] = _board._snapshot()
+	MatchLogic.swap_cells(g, 7, mv[0], mv[1])
+	var valid: bool = not MatchLogic.find_matches(g, 7, 11).is_empty()
+	print("PASS: 提示的交换确实成立" if valid else "FAIL: 提示的交换不成立")
+	_assert(valid)
 
 
 func _assert(cond: bool) -> void:

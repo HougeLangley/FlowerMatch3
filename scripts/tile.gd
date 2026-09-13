@@ -149,7 +149,25 @@ func _build_idle_steps() -> void:
 				.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
+var _hint_tween: Tween = null
+
+
+## 提示（找不到可行步时）：轻微高亮脉动两下；不干扰选中高亮
+func hint_wiggle() -> void:
+	if _hint_tween != null and _hint_tween.is_valid():
+		_hint_tween.kill()
+	modulate = Color.WHITE
+	_hint_tween = create_tween()
+	for i in range(2):
+		_hint_tween.tween_property(self, "modulate", Color(1.32, 1.32, 1.32), 0.18)
+		_hint_tween.tween_property(self, "modulate", Color.WHITE, 0.18)
+
+
 func set_selected(value: bool) -> void:
+	if _hint_tween != null and _hint_tween.is_valid():
+		_hint_tween.kill()
+		_hint_tween = null
+		modulate = Color.WHITE
 	modulate = Color(1.4, 1.4, 1.4) if value else Color.WHITE
 
 

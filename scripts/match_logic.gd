@@ -213,6 +213,12 @@ static func swap_cells(g: Array[int], w: int, a: Vector2i, b: Vector2i) -> void:
 ## 是否存在玩家真的可以执行的可行步（与真实交换规则一致）
 ## 规则：障碍格无棋子不可交换；魔力花与任意相邻棋子交换均有效
 static func has_possible_move(g: Array[int], w: int, h: int) -> bool:
+	return not find_any_move(g, w, h).is_empty()
+
+
+## 找出任意一个可行步的两格（无可行步返回空数组）；供提示系统与判定共用同一套规则
+static func find_any_move(g: Array[int], w: int, h: int) -> Array[Vector2i]:
+	var none: Array[Vector2i] = []
 	for y in range(h):
 		for x in range(w):
 			var from := Vector2i(x, y)
@@ -225,10 +231,10 @@ static func has_possible_move(g: Array[int], w: int, h: int) -> bool:
 				if a == EMPTY or b == EMPTY:
 					continue  # 障碍/空格不可交换（旧版遗漏此处 → 误判有解 → 玩家死锁）
 				if a == MAGIC or b == MAGIC:
-					return true  # 魔力花可任意交换，必定有效
+					return [from, to]  # 魔力花可任意交换，必定有效
 				swap_cells(g, w, from, to)
 				var found := not find_matches(g, w, h).is_empty()
 				swap_cells(g, w, from, to)
 				if found:
-					return true
-	return false
+					return [from, to]
+	return none

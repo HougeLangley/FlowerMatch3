@@ -18,6 +18,7 @@ func _init() -> void:
 	_test_has_possible_move_true()
 	_test_has_possible_move_obstacles()
 	_test_has_possible_move_magic()
+	_test_find_any_move()
 	_test_reshuffle_keeps_specials()
 	_test_swap_cells()
 	_test_match_groups()
@@ -125,6 +126,49 @@ func _test_has_possible_move_magic() -> void:
 		1, -1, 0,
 	]
 	_check(not ML.has_possible_move(walled, 3, 3), "magic: walled-in = no move")
+
+
+## 提示系统的 find_any_move：与 has_possible_move 同一套规则
+func _test_find_any_move() -> void:
+	var g: Array[int] = [
+		0, 1, 0,
+		1, 0, 2,
+		0, 1, 2,
+	]
+	var mv := ML.find_any_move(g, 3, 3)
+	_check(mv.size() == 2, "find_any_move: returns two cells")
+	if mv.size() == 2:
+		var trial: Array[int] = g.duplicate()
+		ML.swap_cells(trial, 3, mv[0], mv[1])
+		_check(not ML.find_matches(trial, 3, 3).is_empty(),
+			"find_any_move: suggested swap really matches")
+	var dead: Array[int] = [
+		3, 0, -1, 0, 0, -1, -1,
+		1, 2, 3, 4, 5, 1, 2,
+		2, 3, 4, 5, 1, 2, 3,
+	]
+	_check(ML.find_any_move(dead, 7, 3).is_empty(), "find_any_move: dead board → empty")
+	var magic: Array[int] = [
+		1, 2, 3,
+		4, ML.MAGIC, 5,
+		6, 1, 2,
+	]
+	var mm := ML.find_any_move(magic, 3, 3)
+	var has_magic := false
+	for c in mm:
+		if magic[c.y * 3 + c.x] == ML.MAGIC:
+			has_magic = true
+	_check(mm.size() == 2 and has_magic, "find_any_move: magic swap recognized")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 99
+	var consistent := true
+	for i in range(20):
+		var r := ML.make_grid(7, 11, 6, rng)
+		var a: bool = ML.has_possible_move(r, 7, 11)
+		var b: bool = not ML.find_any_move(r, 7, 11).is_empty()
+		if a != b:
+			consistent = false
+	_check(consistent, "find_any_move consistent with has_possible_move (20 boards)")
 
 
 ## 重排：保留特殊花与障碍；保证无初始消除且有可行步；不改动输入网格
