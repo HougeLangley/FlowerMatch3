@@ -35,6 +35,25 @@ THEMES = {
                          "drifting down softly, sparkles twinkling, branches swaying slightly, "
                          "static camera, subtle calm motion only, no text, no characters"),
     },
+    "starry": {
+        "image_prompt": ("Cute cartoon mobile game background art, portrait: dreamy night sky "
+                         "gradient from deep indigo to soft violet, twinkling stars, glowing "
+                         "luminous flowers along the bottom, fireflies and sparkling bokeh, "
+                         "pastel neon accents, clean simple composition, no text, no characters"),
+        "video_prompt": ("Gentle ambient background loop: stars twinkling softly, fireflies "
+                         "drifting, luminous flowers glowing and swaying gently, static camera, "
+                         "subtle calm motion only, no text, no characters"),
+    },
+    "butterfly": {
+        "image_prompt": ("Cute cartoon mobile game background art, portrait: fresh spring "
+                         "valley with layered soft green hills, pastel teal and mint sky, "
+                         "colorful butterflies flying, small flowers and clover, light rays "
+                         "and sparkles, clean simple composition, no text, no characters"),
+        "video_prompt": ("Gentle ambient background loop: butterflies fluttering slowly across "
+                         "the scene, grass and flowers swaying in a light breeze, sparkles "
+                         "twinkling, static camera, subtle calm motion only, no text, "
+                         "no characters"),
+    },
 }
 
 

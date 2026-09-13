@@ -29,6 +29,7 @@ func _init() -> void:
 	_test_star_system()
 	_test_make_grid_blocked()
 	_test_level_configs()
+	_test_all_levels_shapes()
 	if _failures == 0:
 		print("== ALL TESTS PASSED ==")
 	else:
@@ -320,6 +321,47 @@ func _test_make_grid_blocked() -> void:
 			valid = false
 	_check(valid, "blocked: playable cells valid types")
 	_check(ML.find_matches(g, 7, 11).is_empty(), "blocked: no initial matches")
+
+
+## 全部关卡：形状掩码合法 + 障碍都在形状内且不重复 + 关卡名唯一
+func _test_all_levels_shapes() -> void:
+	var ok := true
+	for lv in range(1, GS.LEVELS.size() + 1):
+		var mask: Array = GS.shape_of(lv)
+		if mask.size() != 11:
+			ok = false
+		var shape: Dictionary = {}
+		for y in range(mask.size()):
+			var row := String(mask[y])
+			if row.length() != 7:
+				ok = false
+			for x in range(row.length()):
+				if row[x] == "#":
+					shape[Vector2i(x, y)] = true
+		if shape.size() < 30:
+			ok = false  # 可玩格太少（无法正常游玩）
+		var cfg: Dictionary = GS.LEVELS[lv - 1]
+		var seen: Dictionary = {}
+		for v in cfg["vines"]:
+			var c := Vector2i(v[0], v[1])
+			if not shape.has(c) or seen.has(c):
+				ok = false
+			seen[c] = true
+		for sn in cfg["snow"]:
+			var c := Vector2i(sn[0], sn[1])
+			if not shape.has(c) or seen.has(c):
+				ok = false
+			seen[c] = true
+	_check(ok, "shapes: masks valid, obstacles inside & non-overlapping")
+	_check(GS.LEVELS.size() >= 10, "levels: at least 10 levels")
+	var names: Dictionary = {}
+	var names_ok := true
+	for lv in range(1, GS.LEVELS.size() + 1):
+		var n := GS.level_name(lv)
+		if n.is_empty() or names.has(n):
+			names_ok = false
+		names[n] = true
+	_check(names_ok, "levels: unique non-empty names")
 
 
 func _test_level_configs() -> void:

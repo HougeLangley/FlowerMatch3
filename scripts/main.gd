@@ -4,9 +4,12 @@ extends Control
 
 const STAR_GOLD := preload("res://assets/star_gold.png")
 const STAR_GRAY := preload("res://assets/star_gray.png")
+const UI_FONT := preload("res://assets/fonts/ZCOOLKuaiLe-Regular.ttf")
 const BG_PATHS: Array[String] = [
-	"res://assets/video/bg_garden.ogv",
-	"res://assets/video/bg_sakura.ogv",
+	"res://assets/video/bg_garden.ogv",   # 0 晴日花园
+	"res://assets/video/bg_sakura.ogv",   # 1 樱花飘落
+	"res://assets/video/bg_starry.ogv",   # 2 星空花海
+	"res://assets/video/bg_butterfly.ogv", # 3 蝴蝶谷
 ]
 
 @onready var _score_label: Label = %ScoreLabel
@@ -45,6 +48,43 @@ func _ready() -> void:
 	_mute_button.button_pressed = GameState.muted  # 先同步状态再连信号，避免初始化触发
 	_mute_button.toggled.connect(_on_mute_toggled)
 	_update_ui()
+	_show_intro_banner()  # 关卡开场横幅（仪式感）
+
+
+## 关卡开场横幅：第 N 关 + 关卡名（仪式感与成就感）
+func _show_intro_banner() -> void:
+	Sfx.play_star(2)
+	_popup_text("第 %d 关\n%s" % [_level, GameState.level_name(_level)],
+		Color(0.22, 0.42, 0.3), 68, 0.33, 1.3)
+
+
+## 居中弹出文字（淡入 + 轻微上浮 → 停留 → 淡出）
+func _popup_text(text: String, color: Color, font_size: int, y_ratio: float, hold_sec: float) -> void:
+	var label := Label.new()
+	label.text = text
+	var view := get_viewport_rect().size
+	label.size = Vector2(view.x, font_size * 2.6)
+	label.position = Vector2(0.0, view.y * y_ratio)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.add_theme_font_override("font", UI_FONT)
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_outline_color", Color(1, 1, 1, 0.95))
+	label.add_theme_constant_override("outline_size", 14)
+	label.z_index = 20
+	label.modulate.a = 0.0
+	var target_y := label.position.y
+	label.position.y += 36.0
+	add_child(label)
+	var tween := label.create_tween()
+	tween.tween_property(label, "modulate:a", 1.0, 0.3)
+	tween.parallel().tween_property(label, "position:y", target_y, 0.45) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_interval(hold_sec)
+	tween.tween_property(label, "modulate:a", 0.0, 0.45)
+	tween.tween_callback(label.queue_free)
 
 
 func _on_score_changed(new_score: int) -> void:
@@ -55,6 +95,10 @@ func _on_score_changed(new_score: int) -> void:
 func _on_move_made() -> void:
 	_moves_left -= 1
 	_update_ui()
+	if _moves_left == 5:
+		# 最后 5 步紧张感（爽感：制造“拼一把”的心跳）
+		_popup_text("还剩 5 步！加油！", Color(0.95, 0.45, 0.25), 52, 0.3, 1.2)
+		Sfx.play_hint(Vector2(get_viewport_rect().size.x * 0.5, get_viewport_rect().size.y * 0.5))
 	# 提前打到三星线 → 完美收官；否则玩满步数后按最终得分结算
 	if _score >= GameState.star_thresholds(_target)[2]:
 		_end_game(true)
@@ -137,7 +181,10 @@ func _notification(what: int) -> void:
 
 func _update_ui() -> void:
 	_score_label.text = "分数: %d" % _score
-	_info_label.text = "第%d关 ｜ 步数: %d ｜ 目标: %d" % [_level, _moves_left, _target]
+	_info_label.text = "第%d关 %s ｜ %d 步 ｜ 目标 %d" % [
+		_level, GameState.level_name(_level), _moves_left, _target]
+	_info_label.add_theme_color_override("font_color",
+		Color(0.86, 0.34, 0.24) if _moves_left <= 5 else Color(0.32, 0.4, 0.34))
 	_update_live_stars()
 
 

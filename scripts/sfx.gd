@@ -12,10 +12,13 @@ const SOUND_DIR := "res://assets/sounds/"
 const POP_LADDER: Array[float] = [1.0, 1.125, 1.25, 1.5, 1.667]
 # 实时星星逐颗点亮的音高阶梯
 const STAR_LADDER: Array[float] = [1.0, 1.122, 1.26]
+# 每关的调性（转调）：让每一关的消除音听起来都不一样（爽感：关卡个性）
+const KEY_LADDER: Array[float] = [1.0, 1.122, 1.189, 0.891, 1.06, 0.943, 1.26, 0.841]
 
 var _pools: Dictionary = {}      # 名称 -> {players: Array, next: int, rot: int}
 var _variants: Dictionary = {}   # 名称 -> Array[AudioStream]
 var _listener: AudioListener2D
+var _transpose := 1.0
 
 
 func _ready() -> void:
@@ -80,6 +83,11 @@ func _emit(sound: String, pitch: float, pos: Vector2) -> void:
 
 # ============ 游戏侧调用 API ============
 
+## 设置当前关卡的调性（由 Board 在开局时调用）
+func set_level_index(level: int) -> void:
+	_transpose = KEY_LADDER[(maxi(level, 1) - 1) % KEY_LADDER.size()]
+
+
 func play_select(pos: Vector2) -> void:
 	_emit("select", randf_range(0.98, 1.05), pos)
 
@@ -96,20 +104,20 @@ func play_invalid(pos: Vector2) -> void:
 ## 连消：combo 沿五声音阶爬升 + 每次微扰
 func play_pop(combo: int, pos: Vector2) -> void:
 	var step: int = clampi(combo - 1, 0, POP_LADDER.size() - 1)
-	_emit("pop", POP_LADDER[step] * randf_range(0.985, 1.015), pos)
+	_emit("pop", minf(POP_LADDER[step] * _transpose, 2.2) * randf_range(0.985, 1.015), pos)
 
 
 ## 特殊花生成：同一拍多颗时音高轻微错开
 func play_special(pos: Vector2) -> void:
-	_emit("special", randf_range(0.94, 1.06), pos)
+	_emit("special", randf_range(0.94, 1.06) * _transpose, pos)
 
 
 func play_line(pos: Vector2, vertical: bool) -> void:
-	_emit("line", (1.12 if vertical else 1.0) * randf_range(0.98, 1.02), pos)
+	_emit("line", (1.12 if vertical else 1.0) * _transpose * randf_range(0.98, 1.02), pos)
 
 
 func play_boom(pos: Vector2) -> void:
-	_emit("boom", randf_range(0.96, 1.04), pos)
+	_emit("boom", randf_range(0.96, 1.04) * _transpose, pos)
 
 
 func play_magic(pos: Vector2) -> void:

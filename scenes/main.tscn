@@ -134,8 +134,8 @@ grow_horizontal = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.32, 0.4, 0.34, 1)
 theme_override_fonts/font = ExtResource("4_font")
-theme_override_font_sizes/font_size = 38
-text = "第1关 ｜ 步数: 20 ｜ 目标: 1200"
+theme_override_font_sizes/font_size = 30
+text = "第1关 花园初遇 ｜ 20 步 ｜ 目标 1200"
 horizontal_alignment = 1
 vertical_alignment = 1
 

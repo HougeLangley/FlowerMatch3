@@ -29,7 +29,7 @@ func _make_level_cell(level: int) -> Control:
 	btn.texture_disabled = PETAL_DISABLED
 	btn.ignore_texture_size = true
 	btn.stretch_mode = TextureButton.STRETCH_SCALE
-	btn.custom_minimum_size = Vector2(170, 170)
+	btn.custom_minimum_size = Vector2(120, 120)
 	btn.disabled = locked
 	# 关卡数字（显示在花心）
 	var label := Label.new()
@@ -39,7 +39,7 @@ func _make_level_cell(level: int) -> Control:
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.add_theme_font_override("font", UI_FONT)
-	label.add_theme_font_size_override("font_size", 68)
+	label.add_theme_font_size_override("font_size", 48)
 	label.add_theme_color_override("font_color",
 		Color(0.62, 0.64, 0.6) if locked else Color(0.35, 0.3, 0.2))
 	btn.add_child(label)
@@ -53,12 +53,22 @@ func _make_level_cell(level: int) -> Control:
 	for s in range(3):
 		var tr := TextureRect.new()
 		tr.texture = STAR_GOLD if s < n else STAR_GRAY
-		tr.custom_minimum_size = Vector2(42, 42)
+		tr.custom_minimum_size = Vector2(28, 28)
 		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
 		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		stars_box.add_child(tr)
 	cell.add_child(stars_box)
+	# 关卡名（给关卡以身份感）
+	var name_label := Label.new()
+	name_label.text = GameState.level_name(level)
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	name_label.add_theme_font_override("font", UI_FONT)
+	name_label.add_theme_font_size_override("font_size", 20)
+	name_label.add_theme_color_override("font_color",
+		Color(0.78, 0.82, 0.8) if locked else Color(0.36, 0.31, 0.22))
+	cell.add_child(name_label)
 	return cell
 
 

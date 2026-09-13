@@ -1,7 +1,7 @@
 # 鲜花消消乐 · Flower Match 3
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.1.4-blue.svg)](releases)
+[![Version](https://img.shields.io/badge/Version-1.2.0-blue.svg)](releases)
 [![Engine](https://img.shields.io/badge/Godot-4.7-478cbf.svg)](https://godotengine.org)
 
 > 一款用 Godot 4 开发的鲜花主题休闲三消手游（Android）。
@@ -35,16 +35,23 @@
 
 ## 🌸 玩法介绍
 
-- **多关卡**：5 个关卡难度递进（目标分 1200 → 5200，步数 20 → 30），过关解锁下一关；门槛按实测得分分布调校（3 星可达率高）
+- **10 个关卡**：难度递进（步数 20 → 32），过关解锁下一关；每一关的门槛都用自动试玩采样调校过（3 星达成率 30%~60%，失败率 ≤12%）
+- **棋盘形状**（不再只有长方形）：心形 / 菱形 / 蝴蝶 / 星形 / 回环（中空）/ 十字花冠，形状外的虚空格不参与消除
 - **关卡差异化**：每关都有新鲜感——
   - L1 花园初遇：全开放棋盘（引导关）
   - L2 藤蔓缠绕：**藤蔓障碍**永久占格，布局变化
   - L3 破雪开路：**雪块障碍**相邻消除即破，地图逐步打开（“开图”节奏）
-  - L4 心之花园：藤蔓切出心形棋盘 + 中央雪块
-  - L5 终极挑战：**5 色棋盘**（少色更易连消，爽快感拉满）+ 双障碍
+  - L4 心之花园：**心形棋盘** + 中央雪块
+  - L5 五色盛宴：**5 色棋盘** + 藤蔓雪块双障碍
+  - L6 钻石花园：**菱形棋盘** + 成串雪块
+  - L7 蝴蝶之翼：**蝴蝶棋盘**（窄腰 + 双翼）
+  - L8 星之挑战：**星形棋盘** + 上下藤蔓
+  - L9 回环花径：**中空回环棋盘**，绕圈作战
+  - L10 花冠盛放：**十字花冠棋盘**，四角藤蔓封路
 - **基本规则**：7×11 棋盘、5~6 种花朵（关卡不同），**点击选中→点击相邻花朵交换**，或**按住花朵轻划到相邻花朵**直接交换；无效交换自动换回（不扣步数）
 - **死局自救**：棋盘无可消除内容时自动重排（保留特殊花与障碍），并提示「无可消除，重新排列！」；无效交换也会触发检查，怎么都不会卡住
 - **智能提示**：超过 6 秒没找到可消的，自动高亮一组可行步（轻音效 + 棋子脉动），玩起来不费力
+- **爽感反馈**：关卡开场横幅（关卡名 + 仪式感）、连击鼓励语（“太棒了！”“无敌了！”“花开满园！”配上升调音效）、行/列轰炸与爆炸的**屏幕轻震**、最后 5 步紧张提示（计数变红 + 提醒）、**每关不同调性**的消除音（转调让每关听起来都不一样）
 - **棋盘自愈**：藤蔓/雪块把列切开后，每段独立下落补充（不会留空洞）；每次移动后自动补洞 + 输入看门狗兜底
 - **三星评价**：**玩满步数后按最终得分评星**——达标 1★、1.35× 2★、1.75× 3★；提前打到三星线可完美提前收官；右上角星星随分数实时点亮
 - **连锁加倍**：消除后花朵坠落补充，连锁消除得分翻倍，伴随花瓣粒子飞散与得分浮字
@@ -56,7 +63,7 @@
 - **鲜活花朵**：每种花有自己的闲置律动（玫瑰摇曳/向日葵呼吸/樱花飘浮/郁金香摆头/薰衣草轻飘/百合静谧/魔力花旋转/爆炸花心跳），按棋盘对角线错相位形成花园波浪
 - **灵动音效**：14 种代码合成音效（消除三音色变体、五声音阶连锁升调、行列/爆炸/魔力花/雪块破碎/点选），多声部池叠加不打断 + 按格子位置左右声场；无效交换有柔提醒，过关音阶 + 实时星级“叮”声 + 星星逐颗点亮
 - **一键静音**：游戏界面左上角花盘静音按钮（与右上角星级进度对称），点击全局静音（含所有音效）；静音设置持久化保存在本地
-- **动态背景**：MiniMax H3 生成的竖屏循环视频（晴日花园 / 樱花飘落双主题按关交替），运动柔和、不抢棋盘
+- **动态背景**：MiniMax H3 生成的 4 段竖屏循环视频（晴日花园 / 樱花飘落 / 星空花海 / 蝴蝶谷），按关卡自动切换，运动柔和、不抢棋盘
 - **系统导航**：侧滑返回/返回键——游戏界面→选关界面，开场→跳过，选关界面→退出应用
 
 ## 🛠️ 本地构建
@@ -174,8 +181,9 @@ A flower-themed match-3 puzzle game for Android, built with **Godot 4.7** and GD
 
 ## Features
 
-- 5 levels with increasing difficulty (score targets 1200 → 5200, moves 20 → 30), tuned against measured score distributions so 3★ stays achievable and a **star rating based on the final score after all moves** (1★ = target, 2★ = 1.35×, 3★ = 1.75×; hitting the 3★ line ends the level early), with live star progress in the HUD
-- 5 distinctive level layouts: open board / vines / breakable snow / heart-shaped board / 5-color finale with dual obstacles
+- 10 levels with increasing difficulty (moves 20 → 32), each tuned against auto-play sampled score distributions so 3★ stays achievable (30–60%) and a **star rating based on the final score after all moves** (1★ = target, 2★ = 1.35×, 3★ = 1.75×; hitting the 3★ line ends the level early), with live star progress in the HUD
+- **Non-rectangular board shapes**: heart, diamond, butterfly, star, hollow ring and cross — cells outside the shape are void
+- 10 distinctive level layouts mixing vines, breakable snow and 5-color boards
 - 7×11 board with 5–6 flower types (varies by level); **tap-select then tap a neighbour to swap**, or **press and swipe**; invalid swaps revert without costing a move; auto-reshuffle when no moves are left
 - Cascades with a combo score multiplier, floating score text and petal particle effects
 - **Lively idle animations**: every flower has its own motion (rose sway, sunflower breathing, sakura floating, magic flower spinning, bomb heartbeat …), phase-shifted diagonally like a breeze over a garden
@@ -184,6 +192,8 @@ A flower-themed match-3 puzzle game for Android, built with **Godot 4.7** and GD
 - Special tiles: 4-match → line blaster, L/T-shape → 3×3 bomb, 5-match → rainbow magic flower; chain reactions supported
 - Android back gesture/button navigation: in-game → level select, level select → exit
 - Idle hint system: highlights a valid move after ~6 s so players never feel stuck
+- **Juice**: level intro banner with level name, combo praise callouts ("Amazing!" … with rising chimes), screen shake on line/bomb/magic clears, "5 moves left!" tension warning, and a per-level musical key so every level sounds different
+- 4 looping H3-generated background themes (sunny garden / sakura / starry night / butterfly valley)
 - Fully procedural art & audio assets (PIL + numpy), zero external copyright dependencies
 - AI-generated app icon & skippable intro promo video (MiniMax image / H3 video models)
 

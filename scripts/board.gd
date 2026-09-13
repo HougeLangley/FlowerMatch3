@@ -13,6 +13,7 @@ const GRID_H := 11  # 视觉模型测量：屏幕最大容纳 12 行，留底部
 const FLOWER_TYPES := 6
 const POINTS_PER_TILE := 10
 const MAGIC_POINTS_PER_TILE := 15
+const VOID := -2  # 形状虚空（不可见墙）：既无棋子也不画障碍精灵
 const SIDE_MARGIN := 10.0
 const TOP_RATIO := 0.225  # 棋盘上缘占视口高度比例（避开前摄开孔与信息栏）
 const DRAG_TRIGGER_RATIO := 0.3  # 拖拽超过 0.3 格宽即触发交换（轻划手感）
@@ -61,6 +62,7 @@ func _ready() -> void:
 	var view := get_viewport_rect().size
 	_tile_size = (view.x - SIDE_MARGIN * 2.0) / float(GRID_W)
 	_origin = Vector2(SIDE_MARGIN, view.y * TOP_RATIO)
+	Sfx.set_level_index(GameState.current_level)  # 每关不同调性
 	_add_backdrop(view)      # 先加卡片（树序最底）
 	_load_level_config()      # 再加障碍精灵（盖在卡片上）
 	_build_grid()
@@ -121,6 +123,13 @@ func _add_backdrop(view: Vector2) -> void:
 func _load_level_config() -> void:
 	var cfg: Dictionary = GameState.LEVELS[GameState.current_level - 1]
 	_flower_types = int(cfg.get("flowers", 6))
+	# 形状虚空：形状外的格子登记为不可见墙（无棋子、无精灵，等同障碍）
+	var mask: Array = GameState.shape_of(GameState.current_level)
+	for y in range(GRID_H):
+		var row := String(mask[y]) if y < mask.size() else ""
+		for x in range(GRID_W):
+			if x >= row.length() or row[x] != "#":
+				_blocks[Vector2i(x, y)] = VOID
 	for v in cfg.get("vines", []):
 		_blocks[Vector2i(v[0], v[1])] = -1
 	for s in cfg.get("snow", []):
@@ -132,6 +141,8 @@ func _load_level_config() -> void:
 
 func _add_block_sprites() -> void:
 	for cell in _blocks.keys():
+		if int(_blocks[cell]) == VOID:
+			continue  # 形状虚空：不画障碍精灵
 		var sprite := Sprite2D.new()
 		sprite.texture = VINE_TEXTURE if int(_blocks[cell]) < 0 else SNOW_TEXTURE
 		var tex_w := float(sprite.texture.get_width())
@@ -369,6 +380,7 @@ func _resolve_magic(a: Tile, b: Tile) -> void:
 	_score += clear.size() * MAGIC_POINTS_PER_TILE
 	score_changed.emit(_score)
 	Sfx.play_magic((cell_to_world(a.cell) + cell_to_world(b.cell)) * 0.5)
+	_shake(12.0)
 	_clear_cells(clear)
 	await get_tree().create_timer(0.25).timeout
 	await _apply_gravity()
@@ -423,10 +435,14 @@ func _resolve_matches(preferred: Array[Vector2i] = []) -> void:
 		var center := _cells_center(clear.keys())
 		Sfx.play_pop(combo, center)
 		_clear_cells(clear)
-		# 连击浮字
+		# 连击浮字 + 连击播报（爽感：越连越有成就感）
 		if combo > 1:
 			_spawn_float_text(center + Vector2(0, -70), "连锁×%d" % combo,
 				Color(0.98, 0.72, 0.15), 56)
+		if combo >= 3:
+			_spawn_float_text(center + Vector2(0, -140), _combo_callout(combo),
+				Color(1.0, 0.52, 0.2), 68)
+			Sfx.play_star(combo - 3)
 		_spawn_float_text(center, "+%d" % gained, Color(0.2, 0.42, 0.28), 48)
 		for cr in creations:
 			var tile: Tile = _tiles[cr["cell"].x][cr["cell"].y]
@@ -466,6 +482,18 @@ func _repair_holes() -> void:
 		print("[self-heal] 补洞 ", filled, " 格")
 
 
+## 屏幕轻震（行/列轰炸、爆炸、魔力花时；幅度克制，不影响点控）
+func _shake(strength: float) -> void:
+	if strength <= 0.0:
+		return
+	var base := position
+	var tween := create_tween()
+	for i in range(3):
+		tween.tween_property(self, "position",
+			base + Vector2(randf_range(-strength, strength), randf_range(-strength, strength)), 0.05)
+	tween.tween_property(self, "position", base, 0.06)
+
+
 ## 棋盘中心坐标（提示浮字/音效定位用）
 func _board_center() -> Vector2:
 	return _origin + Vector2(GRID_W, GRID_H) * _tile_size * 0.5
@@ -493,13 +521,16 @@ func _expand_special_chains(clear: Dictionary) -> void:
 				for x in range(GRID_W):
 					extra.append(Vector2i(x, c.y))
 				Sfx.play_line(cell_to_world(c), false)
+				_shake(6.0)
 			Tile.Special.LINE_V:
 				for y in range(GRID_H):
 					extra.append(Vector2i(c.x, y))
 				Sfx.play_line(cell_to_world(c), true)
+				_shake(6.0)
 			Tile.Special.BOMB:
 				extra.append_array(MatchLogic.area_cells(c, GRID_W, GRID_H, 1))
 				Sfx.play_boom(cell_to_world(c))
+				_shake(10.0)
 			Tile.Special.MAGIC:
 				extra.append_array(_cells_of_type(_most_common_type()))
 		for e in extra:
@@ -571,6 +602,12 @@ func _spawn_float_text(world_pos: Vector2, text: String, color: Color, font_size
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tween.parallel().tween_property(label, "modulate:a", 0.0, 0.5).set_delay(0.25)
 	tween.tween_callback(label.queue_free)
+
+
+## 连击鼓励语（越连越夸张，配上升调音效）
+func _combo_callout(combo: int) -> String:
+	var words := ["太棒了！", "厉害！", "无敌了！", "花开满园！"]
+	return words[mini(combo - 3, words.size() - 1)]
 
 
 ## 特殊花生成位置：优先落在交换的棋子上，否则取连组中间
