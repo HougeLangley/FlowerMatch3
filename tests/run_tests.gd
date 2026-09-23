@@ -30,6 +30,7 @@ func _init() -> void:
 	_test_make_grid_blocked()
 	_test_level_configs()
 	_test_all_levels_shapes()
+	_test_homography()
 	if _failures == 0:
 		print("== ALL TESTS PASSED ==")
 	else:
@@ -362,6 +363,39 @@ func _test_all_levels_shapes() -> void:
 			names_ok = false
 		names[n] = true
 	_check(names_ok, "levels: unique non-empty names")
+
+
+## 3D 棋盘投影数学：正/反投影往返一致 + 触摸映射到正确棋子
+func _test_homography() -> void:
+	var B := preload("res://scripts/board_view3d.gd")
+	var aspect := 1565.0 / 720.0
+	for pose in [[0.0, 0.0], [0.34, -0.24], [-0.2, 0.15]]:
+		var m: Array = B.make_homography(pose[0], pose[1], aspect, B.FOCAL)
+		var inv: Array = B.mat3_inv(m)
+		# 正投影 → 反投影 应回到原点（UV 空间）
+		var ok := true
+		for p in [Vector2(0.0, 0.0), Vector2(1.0, 1.0), Vector2(0.5, 0.5), Vector2(0.23, 0.81)]:
+			var back: Vector2 = B.mat3_apply(inv, B.mat3_apply(m, p))
+			if back.distance_to(p) > 0.001:
+				ok = false
+		_check(ok, "homography: round-trip exact (yaw %.2f pitch %.2f)" % [pose[0], pose[1]])
+	# 正对时（yaw=pitch=0）投影应为恒等（UV 不变）
+	var m0: Array = B.make_homography(0.0, 0.0, aspect, B.FOCAL)
+	var p0: Vector2 = B.mat3_apply(m0, Vector2(0.25, 0.75))
+	_check(p0.distance_to(Vector2(0.25, 0.75)) < 0.001, "homography: identity when facing")
+	# 倾斜时中心点保持不动（绕中心旋转）
+	var mt: Array = B.make_homography(0.34, -0.24, aspect, B.FOCAL)
+	var pc: Vector2 = B.mat3_apply(mt, Vector2(0.5, 0.5))
+	_check(pc.distance_to(Vector2(0.5, 0.5)) < 0.01, "homography: center fixed under rotation")
+	# 触摸映射：把棋盘某格中心投到屏幕，再反投影应回到该格
+	var grid := B.make_homography(0.3, -0.2, aspect, B.FOCAL)
+	var inv2 := B.mat3_inv(grid)
+	var cell_uv := Vector2((10.0 + 50.0 + 100.0 * 4.0) / 720.0, (352.125 + 50.0 + 100.0 * 6.0) / 1565.0)
+	var screen_uv: Vector2 = B.mat3_apply(grid, cell_uv)
+	var back_uv: Vector2 = B.mat3_apply(inv2, screen_uv)
+	var cell_px := Vector2(back_uv.x * 720.0, back_uv.y * 1565.0)
+	_check(absf(cell_px.x - 460.0) < 1.0 and absf(cell_px.y - 1002.125) < 1.0,
+		"homography: touch maps back to the same tile (%.1f, %.1f)" % [cell_px.x, cell_px.y])
 
 
 func _test_level_configs() -> void:

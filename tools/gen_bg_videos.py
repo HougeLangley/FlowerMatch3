@@ -54,6 +54,24 @@ THEMES = {
                          "twinkling, static camera, subtle calm motion only, no text, "
                          "no characters"),
     },
+    "cloud": {
+        "image_prompt": ("Cute cartoon mobile game background art, portrait: sky islands "
+                         "floating among fluffy pastel clouds, soft peach and lavender sky "
+                         "gradient, waterfalls and flower beds on the islands, sparkles and "
+                         "bokeh, clean simple composition, no text, no characters"),
+        "video_prompt": ("Gentle ambient background loop: clouds drifting slowly, floating "
+                         "islands bobbing slightly, waterfalls flowing, sparkles twinkling, "
+                         "static camera, subtle calm motion only, no text, no characters"),
+    },
+    "moon": {
+        "image_prompt": ("Cute cartoon mobile game background art, portrait: moonlit night "
+                         "garden, big soft glowing moon, silhouetted flowers and willow "
+                         "branches, deep teal and navy sky with stars, fireflies and bokeh, "
+                         "clean simple composition, no text, no characters"),
+        "video_prompt": ("Gentle ambient background loop: moon glow shimmering, fireflies "
+                         "drifting slowly, willow branches swaying, stars twinkling, static "
+                         "camera, subtle calm motion only, no text, no characters"),
+    },
 }
 
 

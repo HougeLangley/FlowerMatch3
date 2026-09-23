@@ -10,6 +10,8 @@ const BG_PATHS: Array[String] = [
 	"res://assets/video/bg_sakura.ogv",   # 1 樱花飘落
 	"res://assets/video/bg_starry.ogv",   # 2 星空花海
 	"res://assets/video/bg_butterfly.ogv", # 3 蝴蝶谷
+	"res://assets/video/bg_cloud.ogv",     # 4 云端仙境
+	"res://assets/video/bg_moon.ogv",      # 5 月夜花园
 ]
 
 @onready var _score_label: Label = %ScoreLabel
@@ -31,6 +33,7 @@ var _target := 0
 var _score := 0
 var _moves_left := 0
 var _over := false
+var _view3d: BoardView3D = null
 
 
 func _ready() -> void:
@@ -49,6 +52,16 @@ func _ready() -> void:
 	_mute_button.toggled.connect(_on_mute_toggled)
 	_update_ui()
 	_show_intro_banner()  # 关卡开场横幅（仪式感）
+	if bool(cfg.get("view3d", false)):
+		_setup_3d_view()  # 3D 风格棋盘（透视形变 + 入场旋转）
+
+
+## 3D 风格棋盘：把棋盘搬进 SubViewport，用单应矩阵形变显示（见 BoardView3D）
+func _setup_3d_view() -> void:
+	_view3d = BoardView3D.new()
+	_view3d.name = "BoardView3D"
+	add_child(_view3d)
+	_view3d.setup(_board, self, get_viewport_rect().size)
 
 
 ## 关卡开场横幅：第 N 关 + 关卡名（仪式感与成就感）

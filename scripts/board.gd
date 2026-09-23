@@ -98,6 +98,13 @@ func _show_hint() -> void:
 	Sfx.play_hint(cell_to_world(mv[0]))
 
 
+## 棋盘可视区域（像素空间）——供 3D 视图与输入代理判断触摸是否落在棋盘内
+func board_rect() -> Rect2:
+	var view := get_viewport_rect().size
+	return Rect2(0.0, _origin.y - _tile_size * 0.7,
+		view.x, _tile_size * (GRID_H + 1.4))
+
+
 func cell_to_world(p_cell: Vector2i) -> Vector2:
 	return _origin + Vector2(p_cell) * _tile_size + Vector2.ONE * (_tile_size * 0.5)
 
